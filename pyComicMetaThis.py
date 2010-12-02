@@ -1,0 +1,197 @@
+#!/usr/bin/python
+
+import os
+import json
+import urllib
+import subprocess
+import zipfile
+import time
+import decimal 
+
+APIKEY="INSERT_YOUR_API_KEY_HERE"
+
+baseURL="http://api.comicvine.com/"
+searchURL = baseURL + 'search'
+issueURL = baseURL + 'issue'
+
+# maybe we'll add .cbr support?
+fileExtList = [".cbz"]
+
+def StripTags(text): 
+     finished = 0 
+     while not finished: 
+         finished = 1 
+         start = text.find("<") 
+         if start >= 0: 
+             stop = text[start:].find(">") 
+             if stop >= 0: 
+                 text = text[:start] + text[start+stop+1:] 
+                 finished = 0 
+     return text 
+
+def getfiles(directory):
+	entries = os.listdir(directory)
+	fileList = [f for f in entries if os.path.splitext(f)[1].lower() in fileExtList and len(os.path.splitext(f)[0]) and os.path.isfile(os.path.join(directory, f))]
+	fileList.sort()
+	return (fileList)
+
+def readComment(filename):
+	archivefile = file(filename)
+	cbz = zipfile.ZipFile(archivefile)
+	cbzComment = cbz.comment
+	cbz.close()
+	return cbzComment	
+
+def searchForIssue(seriesName, issueNumber):
+	cvSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(seriesName + ' ' + issueNumber) + '&resources=issue' 
+	#cvSearchURL = cvSearchURL + '&field_list=name,start_year,id'
+	cvSearchURL = cvSearchURL + '&format=json'
+	cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
+	return cvSearchResults
+
+def getIssueData(issueId):
+	cvIssueURL = issueURL + '/' + str(issueId) + '/' +  '?api_key=' + APIKEY + '&format=json'
+	cvIssueResults = json.load(urllib.urlopen(cvIssueURL))
+	return cvIssueResults
+
+def getVolumeDataFromURL(volumeURL):
+	volumeURL = volumeURL + '?api_key=' + APIKEY  + '&format=json'
+	cvVolumeResults = json.load(urllib.urlopen(volumeURL))
+	return cvVolumeResults
+
+def processDir(dir):
+
+	(fileList) = getfiles(dir)
+
+	for filename in fileList:
+		print 'Processing :' + filename
+
+		# read the meta data from the zipfiles comment field
+		cbzComment = readComment(filename)
+
+		if cbzComment.startswith('{') == False:
+			print 'No ComicBookInfo header found.  We should create one, but what should it contain?'
+			break
+
+		comicBookInfo = json.loads(cbzComment)
+
+		# get series name and issue number from the existing header
+		thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
+		thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
+
+		cvSearchResults = searchForIssue(thisSeries, thisIssue)
+		resultCount = cvSearchResults['number_of_page_results']		
+
+		issueId = 0
+
+		if resultCount == 1:
+			issueId = cvSearchResults['results'][0]['id']
+			print 'Only one match found.  Issue ID is: ' + str(issueId)
+
+		
+
+		if resultCount > 1:
+			print 'Found ' + str(resultCount) + ' matches.  Going to try and find the correct issue...'
+			# probably a better way to keep track of how many loops we've done...
+			index = 0
+
+			matchingIssues = []
+			for k in cvSearchResults['results']:
+				currentSeries = str(cvSearchResults['results'][index]['volume']['name']).rstrip()
+				currentIssue = cvSearchResults['results'][index]['issue_number']
+				# messy gyrations to make the issue number that's expressed as a decimal expressed as a whole number 
+				currentIssueD = decimal.Decimal(str(cvSearchResults['results'][index]['issue_number']))
+				currentIssueI = int(currentIssueD)
+				currentIssue = str(currentIssueI).rstrip()
+				if currentIssue  == thisIssue and currentSeries  == thisSeries:
+					issueId = cvSearchResults['results'][index]['id']
+					matchingIssues.append(k)
+				index = index + 1
+			if len(matchingIssues) == 1:
+				print 'Only one issue had the same series name and issue number, must be it...'
+				issueId = matchingIssues[0]['id']
+				print issueId
+			else:
+				print 'First pass narrowed it down to ' + str(len(matchingIssues))  + ' matches found'
+				for j in matchingIssues:
+					currentVolume = getVolumeDataFromURL(j['volume']['api_detail_url'])
+					print currentVolume['results']['start_year']
+ 					print "####################################\n\n"			
+					print "Issue ID:\t%s" % j['id']
+					print "Volume Name:\t%s" % j['volume']['name']
+					print "Volume First Published:\t%s" % currentVolume['results']['start_year']
+					print "Volume:\t%s" % j['volume']
+					print "Volume Description:\t%s" % StripTags(currentVolume['results']['description'])
+					publishDate = str(j['publish_month']) + '/' + str(j['publish_year'])
+					print "Issue Published:\t %s" % publishDate
+					print "Issue Description:\t%s\n------------------------------------" % j['description'] 
+					print "Issue Description:\t%s\n------------------------------------" % StripTags(j['description']) 
+ 				print "####################################\n\n"			
+				issueId = raw_input('Enter the Issue ID from the list above: ')
+				if issueId == '':
+					issueId = 0 
+				print issueId
+
+		if issueId == 0:
+			print 'Unable to find the issue id.  Sorry'
+			break
+		else: 
+			cvIssueResults = getIssueData(issueId)
+			resultCount = cvIssueResults['number_of_total_results']
+
+			cvVolumeURL = cvIssueResults['results']['volume']['api_detail_url'] + '?api_key=' + APIKEY + '&format=json'
+			cvVolumeResults = json.load(urllib.urlopen(cvVolumeURL))
+
+			# update our JSON object with the CV data
+			comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['name']
+			comicBookInfo['ComicBookInfo/1.0']['publisher'] = cvVolumeResults['results']['publisher']['name']
+			comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
+			comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
+			# personal perference to make volume the year the volume started
+			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
+
+			credits = []
+			for k in cvIssueResults['results']['person_credits']:
+				credit = {}
+				credit['person'] = k['name']
+				credit['role'] = k['roles'][0]['role']
+				credits.append(credit)
+			comicBookInfo['ComicBookInfo/1.0']['credits'] = credits
+
+			# it is possible to preserve the existing tags if we want to
+			# but right now we're wiping them clean
+			tags = []
+			#tags = comicBookInfo['ComicBookInfo/1.0']['tags']
+			
+			# add characters to the tags
+			for k in cvIssueResults['results']['character_credits']:
+				tag = {}
+				tags.append(k['name'])
+
+			# add items to the tags
+			for k in cvIssueResults['results']['object_credits']:
+				tag = {}
+				tags.append(k['name'])
+
+			comicBookInfo['ComicBookInfo/1.0']['tags'] = tags
+
+			# mark the comment as last-edited-by this app
+			comicBookInfo['appID'] = 'pyComicMetaThis/0.1'
+ 
+			print 'Writing back updated ComicBookInfo for ' + filename
+			process = subprocess.Popen(['/usr/bin/zip', filename, '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+			# need a short wait so zip can get ready for our comment
+			time.sleep(1)
+			# dumping without an indent value seems to cause problems...
+			json.dump(comicBookInfo, process.stdin, indent=0)
+			print 'Done with ' + filename
+
+def main():
+	dir = os.getcwd()
+	processDir(dir)
+	
+if __name__ == "__main__":
+	main()
+
+
+
