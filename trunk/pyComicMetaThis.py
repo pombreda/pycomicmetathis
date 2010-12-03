@@ -8,7 +8,7 @@ import zipfile
 import time
 import decimal 
 
-APIKEY="INSERT_YOUR_API_KEY_HERE"
+APIKEY="ENTER_YOUR_API_KEY_HERE"
 
 __program__ = 'pyComicMetaThis.py'
 __version__ = '0.1b'
@@ -22,7 +22,7 @@ fileExtList = [".cbz"]
 
 def blankCBI():
 	emptyCBIContainer = {}
-	emptyCBIContainer['appId'] = __program__ + '/' + __version__
+	emptyCBIContainer['appID'] = __program__ + '/' + __version__
 	emptyCBIContainer['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
 	emptyCBI = {}
 	emptyCBI['series'] = ''
@@ -171,6 +171,8 @@ def processDir(dir):
 			cvVolumeResults = json.load(urllib.urlopen(cvVolumeURL))
 
 			# update our JSON object with the CV data
+			comicBookInfo['ComicBookInfo/1.0']['series'] = thisSeries
+			comicBookInfo['ComicBookInfo/1.0']['issue'] = thisIssue
 			comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['name']
 			comicBookInfo['ComicBookInfo/1.0']['publisher'] = cvVolumeResults['results']['publisher']['name']
 			comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
@@ -179,11 +181,12 @@ def processDir(dir):
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
 
 			credits = []
-			for k in cvIssueResults['results']['person_credits']:
-				credit = {}
-				credit['person'] = k['name']
-				credit['role'] = k['roles'][0]['role']
-				credits.append(credit)
+			for person in cvIssueResults['results']['person_credits']:
+				for j in person['roles']:
+					credit = {}
+					credit['person'] = person['name']
+					credit['role'] = j['role']
+					credits.append(credit)
 			comicBookInfo['ComicBookInfo/1.0']['credits'] = credits
 
 			# it is possible to preserve the existing tags if we want to
@@ -204,7 +207,8 @@ def processDir(dir):
 			comicBookInfo['ComicBookInfo/1.0']['tags'] = tags
 
 			# mark the comment as last-edited-by this app
-			comicBookInfo['appID'] = 'pyComicMetaThis/0.1'
+			comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
+			comicBookInfo['appID'] = __program__ + '/' + __version__
  
 			print 'Writing back updated ComicBookInfo for ' + filename
 			process = subprocess.Popen(['/usr/bin/zip', filename, '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
