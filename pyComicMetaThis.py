@@ -1,24 +1,70 @@
 #!/usr/bin/python
 
-import os
-import json
+"""
+    ComicBookInfo (CBI) implementation
+    See http://code.google.com/p/comicbookinfo for information on CBI.
+
+    Usage:
+    pyComicMetaThis.py [command] [options]
+
+    Calling with no commands/options will iterate through the current
+    folder updating all CBZ files.  You will be prompted for series 
+    name and issue number for any CBZ files that don't have a CBI header
+    or don't have those values filled out in the current CBI header.
+
+    Commands:
+      get		read CBI from .cbz file
+      set		write CBI to .cbz file
+
+    Options:
+      --version		print version and exit
+      -h, --help		print this message and exit
+      -f..., -f=...		subject .cbz file
+      -s.., --series=...	set/get series name
+      -t..., --title=...	set/get comic book title
+      -p..., --publisher...	set/get comic book publisher
+      -i..., --issue...	set/get comic book issue
+      -v..., --volume...	set/get comic book volume
+      -d..., --date...	set/get comic book date [format MM-YYYY]
+      -c, --credits		get comic book credits
+"""
+
+
+
+#APIKEY="ENTER_YOUR_API_KEY_HERE"
+APIKEY = "e75dd8dd18cfdd80e1638de4262ed47ed890b96e"
+
+
+baseURL="http://api.comicvine.com/"
+searchURL = baseURL + 'search'
+issueURL = baseURL + 'issue'
+# maybe we'll add .cbr support?
+fileExtList = [".cbz"]
+
+__program__ = 'pyComicMetaThis.py'
+__version__ = '0.1d'
+__author__ = "Andre (andre.messier@gmail.com); Sasha (sasha@goldnet.ca)"
+__date__ = "2010-12-03"
+__copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
+__license__ = "GPL"
+
+import sys
+#import os
+#import json
 import urllib
 import subprocess
 import zipfile
 import time
 import decimal 
+import getopt
+import os.path
+try: import simplejson as json
+except ImportError: import json
 
-APIKEY="ENTER_YOUR_API_KEY_HERE"
-
-__program__ = 'pyComicMetaThis.py'
-__version__ = '0.1c'
-
-baseURL="http://api.comicvine.com/"
-searchURL = baseURL + 'search'
-issueURL = baseURL + 'issue'
-
-# maybe we'll add .cbr support?
-fileExtList = [".cbz"]
+def usage ():
+	print __program__ + " " +__version__+ " (" + __date__ + ")"
+	print __copyright__
+	print __doc__
 
 def blankCBI():
 	emptyCBIContainer = {}
@@ -141,7 +187,7 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 			for j in matchingIssues:
 				currentVolume = getVolumeDataFromURL(j['volume']['api_detail_url'])
 				print currentVolume['results']['start_year']
- 				print "####################################\n\n"			
+				print "####################################\n\n"			
 				print "Issue ID:\t%s" % j['id']
 				print "Volume Name:\t%s" % j['volume']['name']
 				print "Volume First Published:\t%s" % currentVolume['results']['start_year']
@@ -153,9 +199,9 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 				print "Issue Description:\t%s\n------------------------------------" % stripTags(j['description']) 
  			print "####################################\n\n"			
 			issueId = raw_input('Enter the Issue ID from the list above: ')
-			if issueId == '':
-				issueId = 0 
-			print issueId
+
+	if issueId == '':
+		issueId = 0 
 
 	return issueId
 
@@ -172,9 +218,7 @@ def processDir(dir):
 		thisIssue = getIssueNumber(comicBookInfo)
 
 		cvSearchResults = searchForIssue(thisSeries, thisIssue)
-		print 'foo'
 		issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
-
 		if issueId == 0:
 			print 'Unable to find the issue id.  Sorry'
 			break
@@ -196,8 +240,6 @@ def processDir(dir):
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
 
 			comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(cvIssueResults)
-		
-
 
 			# it is possible to preserve the existing tags if we want to
 			# but right now we're wiping them clean
@@ -219,20 +261,163 @@ def processDir(dir):
 			# mark the comment as last-edited-by this app
 			comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
 			comicBookInfo['appID'] = __program__ + '/' + __version__
- 
-			print 'Writing back updated ComicBookInfo for ' + filename
+	    	        print 'Writing back updated ComicBookInfo for ' + filename
 			process = subprocess.Popen(['/usr/bin/zip', filename, '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 			# need a short wait so zip can get ready for our comment
 			time.sleep(1)
 			# dumping without an indent value seems to cause problems...
-			print comicBookInfo
+			#print comicBookInfo
 			json.dump(comicBookInfo, process.stdin, indent=0)
 			print 'Done with ' + filename
 
+
+def makehash():
+	return collections.defaultdict(makehash)
+
+
 def main():
-	dir = os.getcwd()
-	processDir(dir)
-	
+	usage() 
+	if len(sys.argv) == 1: 
+		dir = os.getcwd()
+		processDir(dir)
+	else:
+		if sys.argv [1] in ("set" , "get"):
+			action = sys.argv[1]
+			argv = sys.argv[1:]
+		else:
+			argv = sys.argv
+			action=""
+		try:
+			if action == "set":
+				opts, args = getopt.getopt(argv,"hf:p:t:s:i:v:d:",["help","version","file=","publisher=","title=","series=", "issue=", "volume=", "date="])
+			else:
+				opts, args = getopt.getopt(argv,"hf:ptsivdc",["help","version","file=","publisher","title","series", "issue", "volume", "date","credits"])
+
+		except getopt.GetoptError:
+			print getopt.GetoptError
+			usage()
+			sys.exit(2)
+
+		tags = { "publisher":"", \
+						"title":"",  \
+						"series":"",  \
+						"issue":"",  \
+						"volume":"", \
+						"date":"",
+						"lastModified":"", \
+						"rating":"",\
+						"publicationYear":"" , \
+						"publicationMonth":"" ,
+						"country":"", \
+						"genre":"" ,\
+						"language":"", \
+						"appID" : "" , \
+						"credits":"",\
+						"tags":""
+					}
+
+		# set to blank for now
+		file = ""
+
+		for opt , arg in opts:
+			if opt in ("-h","--help"):
+				usage()
+				sys.exit()
+			elif opt == "--version":
+				print sys.argv[0] + " " + __version__
+				sys.exit()
+			elif opt in ("-p", "--publisher", "publisher"):
+				if action == "get":
+					tags["publisher"] = "1"
+				else:
+					tags["publisher"] =  arg
+			elif opt in ("-t", "--title"):
+				if action == "get":
+					tags["title"] = "1"
+				else:
+					tags["title"] =  arg
+			elif opt in ("-s", "--series"):
+				if action == "get":
+					tags["series"] = "1"
+				else:
+					tags["series"] =  arg
+			elif opt in ("-i", "--issue"):
+				if action == "get":
+					tags["issue"] = "1"
+				else:
+					tags["issue"] =  arg
+			elif opt in ("-v","--volume"):
+				if action == "get":
+					tags["volume"] = "1"
+				else:
+					tags["volume"] =  arg
+			elif opt in ("-d","--date"):
+				if action == "get":
+					tags["date"] = "1"
+				else:
+					tags["date"] =  arg
+			elif opt in ("-c","--credits"):
+				if action == "get":
+					tags["credits"] = "1"
+			elif opt in ("-f","--file"):
+				if os.path.isfile(arg) :
+					if not zipfile.is_zipfile (arg)  :
+						print arg +": Not a (cbz) zip file."
+						sys.exit(2)
+					else:
+						file = arg # we've got it
+				else:
+					print file + ": no such file"
+					sys.exit(2)
+
+		if file == "" : # it is still blank and all futher work needs it
+			print "No target file specified"
+			sys.exit(2)
+
+		# this is neded both for readin and writing nad we know file is zip file at this point
+		cbzfile = zipfile.ZipFile(file)
+
+		if action == "get" :
+			requestedTags = [];
+			for t in tags:
+				if tags[t] == "1":
+					requestedTags.append(t)
+			print "Getting CBI from " + file
+			cbzcomment = cbzfile.comment
+			try:
+				cbinfo = json.loads(cbzcomment)
+			except:
+				print 'No CBI found in file'
+				sys.exit(2)
+			for k  in cbinfo:
+				if k in ('lastModified' , 'appID'):
+					if tags[k] or len(requestedTags) == 0 :
+						print k + ": " + cbinfo[k]
+				elif k == 'ComicBookInfo/1.0':
+					for kk  in cbinfo[k]:
+						if kk in ('series' , 'title' , 'publisher' , 'publicationMonth' , 'publicationYear' , 'issue' ,'numberOfIssues' , 'volume' , 'numberOfVolumes' , 'rating' , 'genre' , 'language' , 'country' ):
+							if tags[kk] or len(requestedTags) == 0 :
+								print  kk + ": " + str(cbinfo[k][kk])
+						elif kk == 'credits':
+							if tags[kk] or len(requestedTags) == 0 :
+								for kkk  in cbinfo[k][kk]:
+									if kkk['primary'] :
+										primary_str  ="*"
+									else:
+										primary_str = ""
+									print  kkk["role"] + primary_str + ": " +  kkk['person']
+						elif kk == 'tags':
+							print "tags: " + kk
+				elif k[:2] == "x-":
+					print "Custom tags are not yet implemented"
+
+		elif action == "set":
+			print "Setting CBI"
+
+		#	for tag in tags:
+		#		print tag + ": " + tags[tag]
+
+
 if __name__ == "__main__":
 	main()
 
