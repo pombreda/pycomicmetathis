@@ -10,6 +10,9 @@ import decimal
 
 APIKEY="INSERT_YOUR_API_KEY_HERE"
 
+__program__ = 'pyComicMetaThis.py'
+__version__ = '0.1b'
+
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
 issueURL = baseURL + 'issue'
@@ -17,7 +20,18 @@ issueURL = baseURL + 'issue'
 # maybe we'll add .cbr support?
 fileExtList = [".cbz"]
 
-def StripTags(text): 
+def blankCBI():
+	emptyCBIContainer = {}
+	emptyCBIContainer['appId'] = __program__ + '/' + __version__
+	emptyCBIContainer['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
+	emptyCBI = {}
+	emptyCBI['series'] = ''
+	emptyCBI['issue'] = ''
+	emptyCBIContainer['ComicBookInfo/1.0'] = emptyCBI
+	return emptyCBIContainer
+
+
+def stripTags(text): 
      finished = 0 
      while not finished: 
          finished = 1 
@@ -59,25 +73,41 @@ def getVolumeDataFromURL(volumeURL):
 	cvVolumeResults = json.load(urllib.urlopen(volumeURL))
 	return cvVolumeResults
 
+def readCBI(filename):
+	# read the meta data from the zipfiles comment field
+	cbzComment = readComment(filename)
+	if len(cbzComment) == 0:
+		print 'No comment in zip file.  Creating a blank ComicBookInfo structure.'
+		comicBookInfo =  blankCBI()
+	else:
+		if len(cbzComment) > 0 and cbzComment.startswith('{') == False:
+			print 'No ComicBookInfo header found.  We should create one, but what should it contain?'
+		comicBookInfo = json.loads(cbzComment)
+	return comicBookInfo
+
+def getSeriesName(comicBookInfo):
+	thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
+	if thisSeries == '':
+		thisSeries = raw_input('No series name found.  Enter the series name:\t')
+	return thisSeries
+
+def getIssueNumber(comicBookInfo):
+	thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
+	if thisIssue == '':
+		thisIssue = raw_input('No issue number found.  Enter the issue number:\t')
+	return thisIssue
+
 def processDir(dir):
 
 	(fileList) = getfiles(dir)
 
 	for filename in fileList:
 		print 'Processing :' + filename
+		
+		comicBookInfo = readCBI(filename)
 
-		# read the meta data from the zipfiles comment field
-		cbzComment = readComment(filename)
-
-		if cbzComment.startswith('{') == False:
-			print 'No ComicBookInfo header found.  We should create one, but what should it contain?'
-			break
-
-		comicBookInfo = json.loads(cbzComment)
-
-		# get series name and issue number from the existing header
-		thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
-		thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
+		thisSeries = getSeriesName(comicBookInfo)
+		thisIssue = getIssueNumber(comicBookInfo)
 
 		cvSearchResults = searchForIssue(thisSeries, thisIssue)
 		resultCount = cvSearchResults['number_of_page_results']		
@@ -87,8 +117,6 @@ def processDir(dir):
 		if resultCount == 1:
 			issueId = cvSearchResults['results'][0]['id']
 			print 'Only one match found.  Issue ID is: ' + str(issueId)
-
-		
 
 		if resultCount > 1:
 			print 'Found ' + str(resultCount) + ' matches.  Going to try and find the correct issue...'
@@ -121,11 +149,11 @@ def processDir(dir):
 					print "Volume Name:\t%s" % j['volume']['name']
 					print "Volume First Published:\t%s" % currentVolume['results']['start_year']
 					print "Volume:\t%s" % j['volume']
-					print "Volume Description:\t%s" % StripTags(currentVolume['results']['description'])
+					print "Volume Description:\t%s" % stripTags(currentVolume['results']['description'])
 					publishDate = str(j['publish_month']) + '/' + str(j['publish_year'])
 					print "Issue Published:\t %s" % publishDate
 					print "Issue Description:\t%s\n------------------------------------" % j['description'] 
-					print "Issue Description:\t%s\n------------------------------------" % StripTags(j['description']) 
+					print "Issue Description:\t%s\n------------------------------------" % stripTags(j['description']) 
  				print "####################################\n\n"			
 				issueId = raw_input('Enter the Issue ID from the list above: ')
 				if issueId == '':
