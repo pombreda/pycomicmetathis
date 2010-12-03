@@ -175,57 +175,6 @@ def processDir(dir):
 		print 'foo'
 		issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
 
-
-		#resultCount = cvSearchResults['number_of_page_results']		
-
-		#issueId = 0
-
-		#if resultCount == 1:
-		#	issueId = cvSearchResults['results'][0]['id']
-		#	print 'Only one match found.  Issue ID is: ' + str(issueId)
-
-		#if resultCount > 1:
-		#	print 'Found ' + str(resultCount) + ' matches.  Going to try and find the correct issue...'
-		#	# probably a better way to keep track of how many loops we've done...
-		#	index = 0
-
-		#	matchingIssues = []
-		#	for k in cvSearchResults['results']:
-		#		currentSeries = str(cvSearchResults['results'][index]['volume']['name']).rstrip()
-		#		currentIssue = cvSearchResults['results'][index]['issue_number']
-		#		# messy gyrations to make the issue number that's expressed as a decimal expressed as a whole number 
-		#		currentIssueD = decimal.Decimal(str(cvSearchResults['results'][index]['issue_number']))
-		#		currentIssueI = int(currentIssueD)
-		#		currentIssue = str(currentIssueI).rstrip()
-		#		if currentIssue  == thisIssue and currentSeries  == thisSeries:
-		#			issueId = cvSearchResults['results'][index]['id']
-		#			matchingIssues.append(k)
-		#		index = index + 1
-		#	if len(matchingIssues) == 1:
-		#		print 'Only one issue had the same series name and issue number, must be it...'
-		#		issueId = matchingIssues[0]['id']
-		#		print issueId
-		#	else:
-		#		print 'First pass narrowed it down to ' + str(len(matchingIssues))  + ' matches found'
-		#		for j in matchingIssues:
-		#			currentVolume = getVolumeDataFromURL(j['volume']['api_detail_url'])
-		#			print currentVolume['results']['start_year']
- 		#			print "####################################\n\n"			
-		#			print "Issue ID:\t%s" % j['id']
-		#			print "Volume Name:\t%s" % j['volume']['name']
-		#			print "Volume First Published:\t%s" % currentVolume['results']['start_year']
-		#			print "Volume:\t%s" % j['volume']
-		#			print "Volume Description:\t%s" % stripTags(currentVolume['results']['description'])
-		#			publishDate = str(j['publish_month']) + '/' + str(j['publish_year'])
-		#			print "Issue Published:\t %s" % publishDate
-		#			print "Issue Description:\t%s\n------------------------------------" % j['description'] 
-		#			print "Issue Description:\t%s\n------------------------------------" % stripTags(j['description']) 
- 		#		print "####################################\n\n"			
-		#		issueId = raw_input('Enter the Issue ID from the list above: ')
-		#		if issueId == '':
-		#			issueId = 0 
-		#		print issueId
-
 		if issueId == 0:
 			print 'Unable to find the issue id.  Sorry'
 			break
@@ -246,14 +195,6 @@ def processDir(dir):
 			# personal perference to make volume the year the volume started
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
 
-			#credits = []
-			#for person in cvIssueResults['results']['person_credits']:
-			#	for role in person['roles']:
-			#		credit = {}
-			#		credit['person'] = person['name']
-			#		credit['role'] = role['role']
-			#		credits.append(credit)
-			#comicBookInfo['ComicBookInfo/1.0']['credits'] = credits
 			comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(cvIssueResults)
 		
 
