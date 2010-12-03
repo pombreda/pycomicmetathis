@@ -29,28 +29,23 @@
       -c, --credits		get comic book credits
 """
 
-
-
-#APIKEY="ENTER_YOUR_API_KEY_HERE"
-APIKEY = "e75dd8dd18cfdd80e1638de4262ed47ed890b96e"
-
+APIKEY="ENTER_YOUR_API_KEY_HERE"
 
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
 issueURL = baseURL + 'issue'
+
 # maybe we'll add .cbr support?
 fileExtList = [".cbz"]
 
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.1d'
+__version__ = '0.1e'
 __author__ = "Andre (andre.messier@gmail.com); Sasha (sasha@goldnet.ca)"
 __date__ = "2010-12-03"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
 __license__ = "GPL"
 
 import sys
-#import os
-#import json
 import urllib
 import subprocess
 import zipfile
@@ -273,6 +268,7 @@ def processDir(dir):
 
 def makehash():
 	return collections.defaultdict(makehash)
+
 
 
 def main():
