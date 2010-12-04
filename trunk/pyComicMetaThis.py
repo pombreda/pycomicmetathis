@@ -279,7 +279,7 @@ def main():
 	else:
 		if sys.argv [1] in ("set" , "get"):
 			action = sys.argv[1]
-			argv = sys.argv[1:]
+			argv = sys.argv[2:]
 		else:
 			argv = sys.argv
 			action=""
