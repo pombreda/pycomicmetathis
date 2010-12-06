@@ -15,7 +15,11 @@
     Commands:
       get		read CBI from .cbz file
       set		write CBI to .cbz file
-
+      autoset		set metadata from ComicVine database
+			using autoset causes all other options
+			to be ignored.  Autoset options are 
+			set by editing the script.
+	
     Options:
       --version		print version and exit
       -h, --help		print this message and exit
@@ -29,7 +33,17 @@
       -c, --credits		get comic book credits
 """
 
-APIKEY="ENTER_YOUR_API_KEY_HERE"
+APIKEY="e75dd8dd18cfdd80e1638de4262ed47ed890b96e"
+
+updateTags = True
+updateCredits = True
+# setting purgeExistingTags or purgeExistingCredits to False 
+# could be dangerous if you run this on the same files 
+# repeatedly as the tags will be duplicated
+purgeExistingTags = True
+purgeExistingTags = True
+includeCharactersAsTags = True
+includeItemsAsTags = True
 
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
@@ -39,9 +53,9 @@ issueURL = baseURL + 'issue'
 fileExtList = [".cbz"]
 
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.1e'
+__version__ = '0.1f'
 __author__ = "Andre (andre.messier@gmail.com); Sasha (sasha@goldnet.ca)"
-__date__ = "2010-12-03"
+__date__ = "2010-12-05"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
 __license__ = "GPL"
 
@@ -234,24 +248,28 @@ def processDir(dir):
 			# personal perference to make volume the year the volume started
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
 
-			comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(cvIssueResults)
-
-			# it is possible to preserve the existing tags if we want to
-			# but right now we're wiping them clean
-			tags = []
-			#tags = comicBookInfo['ComicBookInfo/1.0']['tags']
+			if updateCredits == True:
+				comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(cvIssueResults)
 			
-			# add characters to the tags
-			for k in cvIssueResults['results']['character_credits']:
-				tag = {}
-				tags.append(k['name'])
+			if purgeExistingTags == True:
+				tags = []
+			else:
+				tags = comicBookInfo['ComicBookInfo/1.0']['tags']
 
-			# add items to the tags
-			for k in cvIssueResults['results']['object_credits']:
-				tag = {}
-				tags.append(k['name'])
+			if updateTags == True:
+				if includeCharactersAsTags == True:			
+					# add characters to the tags
+					for k in cvIssueResults['results']['character_credits']:
+						tag = {}
+						tags.append(k['name'])
 
-			comicBookInfo['ComicBookInfo/1.0']['tags'] = tags
+				if includeItemsAsTags == True:
+					# add items to the tags
+					for k in cvIssueResults['results']['object_credits']:
+						tag = {}
+						tags.append(k['name'])
+
+				comicBookInfo['ComicBookInfo/1.0']['tags'] = tags
 
 			# mark the comment as last-edited-by this app
 			comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
@@ -273,7 +291,7 @@ def makehash():
 
 def main():
 	usage() 
-	if len(sys.argv) == 1: 
+	if len(sys.argv) == 1 or sys.argv[1] == 'autoset' :  
 		dir = os.getcwd()
 		processDir(dir)
 	else:
@@ -367,7 +385,8 @@ def main():
 					sys.exit(2)
 
 		if file == "" : # it is still blank and all futher work needs it
-			print "No target file specified"
+			if action != "":
+				print "No target file specified"
 			sys.exit(2)
 
 		# this is neded both for readin and writing nad we know file is zip file at this point
