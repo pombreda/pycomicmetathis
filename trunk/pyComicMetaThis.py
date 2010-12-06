@@ -47,10 +47,20 @@ includeItemsAsTags = True
 # interactiveMode will prompt the user for series and issue info 
 # if it can't be determined automatically.  
 interactiveMode = True
+
 # if interactiveMode is disabled, any issues that can't be
 # identified automatically will be logged to this file.
 # The file is appended to.
 logFileName = 'pyComicMetaThis.log'
+
+# if the series name can't be determined by looking at the CBI
+# ask the user to enter it.  Cannot be used if assumeDirIsSeries
+# is set to True 
+promptSeriesNameIfBlank = True
+# if the series name is blank assume the directory is named after
+# the series.  Setting this to true will cause the 
+# promptSeriesNameIfBlank flag to be ignored.
+assumeDirIsSeries = False
 
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
@@ -146,16 +156,19 @@ def readCBI(filename):
 		comicBookInfo = json.loads(cbzComment)
 	return comicBookInfo
 
-def getSeriesName(comicBookInfo):
+def getSeriesName(comicBookInfo, directory):
 	thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
-	if thisSeries == '' and interactiveMode == True:
+	if thisSeries == '' and assumeDirIsSeries == True :
+		thisSeries = os.path.basename(directory)
+	if thisSeries == '' and interactiveMode == True and promptSeriesNameIfBlank == True :
 		thisSeries = raw_input('No series name found.  Enter the series name:\t')
 	return thisSeries
 
-def getIssueNumber(comicBookInfo):
+def getIssueNumber(comicBookInfo, filename):
 	thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
 	if thisIssue == '' and interactiveMode == True:
 		thisIssue = raw_input('No issue number found.  Enter the issue number:\t')
+	# TODO if there is a single number in the filename, assume that is the issue number
 	return thisIssue
 
 def getCredits(cvIssueResults):
@@ -193,6 +206,7 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 				#issueId = cvSearchResults['results'][index]['id']
 				matchingIssues.append(k)
 			index = index + 1
+
 		if len(matchingIssues) == 1:
 			print 'Only one issue had the same series name and issue number, must be it...'
 			issueId = matchingIssues[0]['id']
@@ -202,7 +216,7 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 			if interactiveMode == True:
 				for j in matchingIssues:
 					currentVolume = getVolumeDataFromURL(j['volume']['api_detail_url'])
-					print currentVolume['results']['start_year']
+					# print currentVolume['results']['start_year']
 					print "####################################\n\n"			
 					print "Issue ID:\t%s" % j['id']
 					print "Volume Name:\t%s" % j['volume']['name']
@@ -233,8 +247,8 @@ def processDir(dir):
 		
 		comicBookInfo = readCBI(filename)
 
-		thisSeries = getSeriesName(comicBookInfo)
-		thisIssue = getIssueNumber(comicBookInfo)
+		thisSeries = getSeriesName(comicBookInfo, dir)
+		thisIssue = getIssueNumber(comicBookInfo, filename)
 
 		cvSearchResults = searchForIssue(thisSeries, thisIssue)
 		issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
