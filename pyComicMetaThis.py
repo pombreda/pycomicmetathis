@@ -44,6 +44,13 @@ purgeExistingTags = True
 purgeExistingTags = True
 includeCharactersAsTags = True
 includeItemsAsTags = True
+# interactiveMode will prompt the user for series and issue info 
+# if it can't be determined automatically.  
+interactiveMode = False
+# if interactiveMode is disabled, any issues that can't be
+# identified automatically will be logged to this file.
+# The file is appended to.
+logFileName = 'pyComicMetaThis.log'
 
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
@@ -84,7 +91,6 @@ def blankCBI():
 	emptyCBI['issue'] = ''
 	emptyCBIContainer['ComicBookInfo/1.0'] = emptyCBI
 	return emptyCBIContainer
-
 
 def stripTags(text): 
      finished = 0 
@@ -132,7 +138,7 @@ def readCBI(filename):
 	# read the meta data from the zipfiles comment field
 	cbzComment = readComment(filename)
 	if len(cbzComment) == 0:
-		print 'No comment in zip file.  Creating a blank ComicBookInfo structure.'
+		print 'No comment in zip file.'
 		comicBookInfo =  blankCBI()
 	else:
 		if len(cbzComment) > 0 and cbzComment.startswith('{') == False:
@@ -142,14 +148,16 @@ def readCBI(filename):
 
 def getSeriesName(comicBookInfo):
 	thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
-	if thisSeries == '':
+	if thisSeries == '' and interactiveMode == True:
 		thisSeries = raw_input('No series name found.  Enter the series name:\t')
+	return "Green Lantern"
 	return thisSeries
 
 def getIssueNumber(comicBookInfo):
 	thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
-	if thisIssue == '':
+	if thisIssue == '' and interactiveMode == True:
 		thisIssue = raw_input('No issue number found.  Enter the issue number:\t')
+	thisIssue = '5'
 	return thisIssue
 
 def getCredits(cvIssueResults):
@@ -193,21 +201,25 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 			print issueId
 		else:
 			print 'First pass narrowed it down to ' + str(len(matchingIssues))  + ' matches found'
-			for j in matchingIssues:
-				currentVolume = getVolumeDataFromURL(j['volume']['api_detail_url'])
-				print currentVolume['results']['start_year']
-				print "####################################\n\n"			
-				print "Issue ID:\t%s" % j['id']
-				print "Volume Name:\t%s" % j['volume']['name']
-				print "Volume First Published:\t%s" % currentVolume['results']['start_year']
-				print "Volume:\t%s" % j['volume']
-				print "Volume Description:\t%s" % stripTags(currentVolume['results']['description'])
-				publishDate = str(j['publish_month']) + '/' + str(j['publish_year'])
-				print "Issue Published:\t %s" % publishDate
-				print "Issue Description:\t%s\n------------------------------------" % j['description'] 
-				print "Issue Description:\t%s\n------------------------------------" % stripTags(j['description']) 
- 			print "####################################\n\n"			
-			issueId = raw_input('Enter the Issue ID from the list above: ')
+			if interactiveMode == True:
+				for j in matchingIssues:
+					currentVolume = getVolumeDataFromURL(j['volume']['api_detail_url'])
+					print currentVolume['results']['start_year']
+					print "####################################\n\n"			
+					print "Issue ID:\t%s" % j['id']
+					print "Volume Name:\t%s" % j['volume']['name']
+					print "Volume First Published:\t%s" % currentVolume['results']['start_year']
+					print "Volume:\t%s" % j['volume']
+					print "Volume Description:\t%s" % stripTags(currentVolume['results']['description'])
+					publishDate = str(j['publish_month']) + '/' + str(j['publish_year'])
+					print "Issue Published:\t %s" % publishDate
+					print "Issue Description:\t%s\n------------------------------------" % j['description'] 
+					print "Issue Description:\t%s\n------------------------------------" % stripTags(j['description']) 
+ 				print "####################################\n\n"			
+				issueId = raw_input('Enter the Issue ID from the list above: ')
+			else:
+				print 'Unable to find Issue ID and we are in non-interactive mode'
+
 
 	if issueId == '':
 		issueId = 0 
@@ -230,7 +242,11 @@ def processDir(dir):
 		issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
 		if issueId == 0:
 			print 'Unable to find the issue id.  Sorry'
-			break
+			if interactiveMode != True:
+				logFile = open(logFileName, 'a')
+				logFile.write(dir + '/' + filename + '\n')
+				logFile.close()
+			#break
 		else: 
 			cvIssueResults = getIssueData(issueId)
 			resultCount = cvIssueResults['number_of_total_results']
