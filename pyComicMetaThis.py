@@ -46,7 +46,7 @@ includeCharactersAsTags = True
 includeItemsAsTags = True
 # interactiveMode will prompt the user for series and issue info 
 # if it can't be determined automatically.  
-interactiveMode = False
+interactiveMode = True
 # if interactiveMode is disabled, any issues that can't be
 # identified automatically will be logged to this file.
 # The file is appended to.
