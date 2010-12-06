@@ -150,14 +150,12 @@ def getSeriesName(comicBookInfo):
 	thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
 	if thisSeries == '' and interactiveMode == True:
 		thisSeries = raw_input('No series name found.  Enter the series name:\t')
-	return "Green Lantern"
 	return thisSeries
 
 def getIssueNumber(comicBookInfo):
 	thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
 	if thisIssue == '' and interactiveMode == True:
 		thisIssue = raw_input('No issue number found.  Enter the issue number:\t')
-	thisIssue = '5'
 	return thisIssue
 
 def getCredits(cvIssueResults):
