@@ -82,9 +82,9 @@ issueURL = baseURL + 'issue'
 fileExtList = [".cbz"]
 
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.1f'
+__version__ = '0.1g'
 __author__ = "Andre (andre.messier@gmail.com); Sasha (sasha@goldnet.ca)"
-__date__ = "2010-12-05"
+__date__ = "2010-12-07"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
 __license__ = "GPL"
 
@@ -299,6 +299,10 @@ def processDir(dir):
 			comicBookInfo['ComicBookInfo/1.0']['publisher'] = cvVolumeResults['results']['publisher']['name']
 			comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
 			comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
+			if includeDescriptionAsComment == True:
+				issueDescription = stripTags(cvIssueResults['results']['description'])
+				issueDescription = issueDescription[:maxDescriptionLength]
+				comicBookInfo['ComicBookInfo/1.0']['comment'] = cvIssueResults['results']['description']
 			# personal perference to make volume the year the volume started
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
 
