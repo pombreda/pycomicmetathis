@@ -44,6 +44,7 @@ purgeExistingTags = True
 purgeExistingTags = True
 includeCharactersAsTags = True
 includeItemsAsTags = True
+includeDescriptionAsComment = True
 # interactiveMode will prompt the user for series and issue info 
 # if it can't be determined automatically.  
 interactiveMode = True
@@ -61,6 +62,17 @@ promptSeriesNameIfBlank = True
 # the series.  Setting this to true will cause the 
 # promptSeriesNameIfBlank flag to be ignored.
 assumeDirIsSeries = False
+
+# if more than one match is found and we are in interactiveMode
+# these flags determine if the Issue description and/or
+# series description are displayed
+displayIssueDescriptionOnDupe = True
+displaySeriesDescriptionOnDupe = True
+
+# how many characters of the issues/series description to show
+# if the includeDescriptionAsComment is true, this will also
+# limit how many characters are used there
+maxDescriptionLength = 500
 
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
@@ -206,13 +218,20 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 				#issueId = cvSearchResults['results'][index]['id']
 				matchingIssues.append(k)
 			index = index + 1
+		
+		# we don't want to automatically remove all the matches so 
+		# let the user deal with them if we can't narrow them down to one.
+		if len(matchingIssues) == 0:
+			print 'Unable to narrow down the results'
+			matchingIssues = cvSearchResults
 
 		if len(matchingIssues) == 1:
 			print 'Only one issue had the same series name and issue number, must be it...'
 			issueId = matchingIssues[0]['id']
 			print issueId
 		else:
-			print 'First pass narrowed it down to ' + str(len(matchingIssues))  + ' matches found'
+			if resultCount != len(matchingIssues):
+				print 'First pass narrowed it down to ' + str(len(matchingIssues))  + ' matches found'
 			if interactiveMode == True:
 				for j in matchingIssues:
 					currentVolume = getVolumeDataFromURL(j['volume']['api_detail_url'])
@@ -222,11 +241,18 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 					print "Volume Name:\t%s" % j['volume']['name']
 					print "Volume First Published:\t%s" % currentVolume['results']['start_year']
 					print "Volume:\t%s" % j['volume']
-					print "Volume Description:\t%s" % stripTags(currentVolume['results']['description'])
+					if displaySeriesDescriptionOnDupe == True:
+						volumeDescription = stripTags(currentVolume['results']['description'])
+						volumeDescription = volumeDescription[:maxDescriptionLength]
+						print "Volume Description:\t%s" % volumeDescription
 					publishDate = str(j['publish_month']) + '/' + str(j['publish_year'])
 					print "Issue Published:\t %s" % publishDate
-					print "Issue Description:\t%s\n------------------------------------" % j['description'] 
-					print "Issue Description:\t%s\n------------------------------------" % stripTags(j['description']) 
+					if displayIssueDescriptionOnDupe == True:
+						issueDescription = stripTags(j['description']) 
+						issueDescription = issueDescription[:maxDescriptionLength]
+						print "Issue Description:\t%s\n" % issueDescription 
+					print "------------------------------------"
+
  				print "####################################\n\n"			
 				issueId = raw_input('Enter the Issue ID from the list above: ')
 			else:
