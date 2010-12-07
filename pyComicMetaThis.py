@@ -41,7 +41,7 @@ updateCredits = True
 # could be dangerous if you run this on the same files 
 # repeatedly as the tags will be duplicated
 purgeExistingTags = True
-purgeExistingTags = True
+purgeExistingCredits = True
 includeCharactersAsTags = True
 includeItemsAsTags = True
 includeDescriptionAsComment = True
@@ -74,6 +74,8 @@ displaySeriesDescriptionOnDupe = True
 # limit how many characters are used there
 maxDescriptionLength = 500
 
+searchSubFolders = True
+
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
 issueURL = baseURL + 'issue'
@@ -82,7 +84,7 @@ issueURL = baseURL + 'issue'
 fileExtList = [".cbz"]
 
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.1g'
+__version__ = '0.2'
 __author__ = "Andre (andre.messier@gmail.com); Sasha (sasha@goldnet.ca)"
 __date__ = "2010-12-07"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
@@ -130,7 +132,12 @@ def getfiles(directory):
 	entries = os.listdir(directory)
 	fileList = [f for f in entries if os.path.splitext(f)[1].lower() in fileExtList and len(os.path.splitext(f)[0]) and os.path.isfile(os.path.join(directory, f))]
 	fileList.sort()
-	return (fileList)
+	dirList = []
+	if searchSubFolders == True:
+		# Get a list of all sub dirs 
+		dirList = [d for d in entries if os.path.isdir(os.path.join(directory, d)) and not d[0] == '.']
+		dirList.sort()	
+	return (fileList,dirList)
 
 def readComment(filename):
 	archivefile = file(filename)
@@ -156,9 +163,10 @@ def getVolumeDataFromURL(volumeURL):
 	cvVolumeResults = json.load(urllib.urlopen(volumeURL))
 	return cvVolumeResults
 
-def readCBI(filename):
+def readCBI(dir, filename):
 	# read the meta data from the zipfiles comment field
-	cbzComment = readComment(filename)
+	print os.path.join(dir,filename)
+	cbzComment = readComment(os.path.join(dir, filename))
 	if len(cbzComment) == 0:
 		print 'No comment in zip file.'
 		comicBookInfo =  blankCBI()
@@ -168,15 +176,18 @@ def readCBI(filename):
 		comicBookInfo = json.loads(cbzComment)
 	return comicBookInfo
 
-def getSeriesName(comicBookInfo, directory):
+def getSeriesName(comicBookInfo, directory, filename):
 	thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
 	if thisSeries == '' and assumeDirIsSeries == True :
 		thisSeries = os.path.basename(directory)
 	if thisSeries == '' and interactiveMode == True and promptSeriesNameIfBlank == True :
+		print directory
+		print filename
+		print 'Processing %s:' % os.path.join(directory, filename)
 		thisSeries = raw_input('No series name found.  Enter the series name:\t')
 	return thisSeries
 
-def getIssueNumber(comicBookInfo, filename):
+def getIssueNumber(comicBookInfo, directory, filename):
 	thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
 	if thisIssue == '' and interactiveMode == True:
 		thisIssue = raw_input('No issue number found.  Enter the issue number:\t')
@@ -184,7 +195,6 @@ def getIssueNumber(comicBookInfo, filename):
 	return thisIssue
 
 def getCredits(cvIssueResults):
-	credits = []
 	for person in cvIssueResults['results']['person_credits']:
 		for role in person['roles']:
 			credit = {}
@@ -196,6 +206,9 @@ def getCredits(cvIssueResults):
 def getIssueId(thisSeries, thisIssue, cvSearchResults):
 	issueId = 0
 	resultCount = cvSearchResults['number_of_page_results']		
+
+	#with open('searchJSON.txt', mode='w') as f:
+	#	json.dump(cvSearchResults,f, indent = 2)
 
 	if resultCount == 1:
 		issueId = cvSearchResults['results'][0]['id']
@@ -222,8 +235,8 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 		# we don't want to automatically remove all the matches so 
 		# let the user deal with them if we can't narrow them down to one.
 		if len(matchingIssues) == 0:
-			print 'Unable to narrow down the results'
-			matchingIssues = cvSearchResults
+			for k in cvSearchResults['results']:
+				matchingIssues.append(k)
 
 		if len(matchingIssues) == 1:
 			print 'Only one issue had the same series name and issue number, must be it...'
@@ -238,9 +251,11 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 					# print currentVolume['results']['start_year']
 					print "####################################\n\n"			
 					print "Issue ID:\t%s" % j['id']
+					print "Issue Name:\t%s" % j['name']
+					print "Issue URL:\t%s" % j['api_detail_url']
 					print "Volume Name:\t%s" % j['volume']['name']
 					print "Volume First Published:\t%s" % currentVolume['results']['start_year']
-					print "Volume:\t%s" % j['volume']
+					print "Volume URL:\t%s" % j['volume']['api_detail_url']
 					if displaySeriesDescriptionOnDupe == True:
 						volumeDescription = stripTags(currentVolume['results']['description'])
 						volumeDescription = volumeDescription[:maxDescriptionLength]
@@ -266,15 +281,15 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 
 def processDir(dir):
 
-	(fileList) = getfiles(dir)
+	(fileList, dirList) = getfiles(dir)
 
 	for filename in fileList:
 		print 'Processing :' + filename
 		
-		comicBookInfo = readCBI(filename)
+		comicBookInfo = readCBI(dir, filename)
 
-		thisSeries = getSeriesName(comicBookInfo, dir)
-		thisIssue = getIssueNumber(comicBookInfo, filename)
+		thisSeries = getSeriesName(comicBookInfo, dir, filename)
+		thisIssue = getIssueNumber(comicBookInfo, dir, filename)
 
 		cvSearchResults = searchForIssue(thisSeries, thisIssue)
 		issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
@@ -306,6 +321,12 @@ def processDir(dir):
 			# personal perference to make volume the year the volume started
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
 
+
+			if purgeExistingCredits == True:
+				credits = []
+			else:
+				credits = comicBookInfo['ComicBookInfo/1.0']['tags']
+
 			if updateCredits == True:
 				comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(cvIssueResults)
 			
@@ -333,14 +354,15 @@ def processDir(dir):
 			comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
 			comicBookInfo['appID'] = __program__ + '/' + __version__
 	    	        print 'Writing back updated ComicBookInfo for ' + filename
-			process = subprocess.Popen(['/usr/bin/zip', filename, '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+			process = subprocess.Popen(['/usr/bin/zip', os.path.join(dir, filename), '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 			# need a short wait so zip can get ready for our comment
 			time.sleep(1)
-			# dumping without an indent value seems to cause problems...
+			# dumping without an indent value seems to cause problems unless you've recompiled zip with longer line support
 			#print comicBookInfo
 			json.dump(comicBookInfo, process.stdin, indent=0)
 			print 'Done with ' + filename
-
+	for subdir in dirList:
+		processDir(os.path.join(dir, subdir))
 
 def makehash():
 	return collections.defaultdict(makehash)
