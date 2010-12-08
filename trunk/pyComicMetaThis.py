@@ -32,6 +32,13 @@
       -d..., --date...	set/get comic book date [format MM-YYYY]
       -c, --credits		get comic book credits
 """
+__program__ = 'pyComicMetaThis.py'
+__version__ = '0.2b'
+__author__ = "Andre (andre.messier@gmail.com); Sasha (sasha@goldnet.ca)"
+__date__ = "2010-12-07"
+__copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
+__license__ = "GPL"
+
 
 APIKEY="e75dd8dd18cfdd80e1638de4262ed47ed890b96e"
 
@@ -82,13 +89,6 @@ issueURL = baseURL + 'issue'
 
 # maybe we'll add .cbr support?
 fileExtList = [".cbz"]
-
-__program__ = 'pyComicMetaThis.py'
-__version__ = '0.2'
-__author__ = "Andre (andre.messier@gmail.com); Sasha (sasha@goldnet.ca)"
-__date__ = "2010-12-07"
-__copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
-__license__ = "GPL"
 
 import sys
 import urllib
@@ -194,7 +194,7 @@ def getIssueNumber(comicBookInfo, directory, filename):
 	# TODO if there is a single number in the filename, assume that is the issue number
 	return thisIssue
 
-def getCredits(cvIssueResults):
+def getCredits(credits, cvIssueResults):
 	for person in cvIssueResults['results']['person_credits']:
 		for role in person['roles']:
 			credit = {}
@@ -328,7 +328,7 @@ def processDir(dir):
 				credits = comicBookInfo['ComicBookInfo/1.0']['tags']
 
 			if updateCredits == True:
-				comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(cvIssueResults)
+				comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(credits, cvIssueResults)
 			
 			if purgeExistingTags == True:
 				tags = []
