@@ -68,7 +68,7 @@ promptSeriesNameIfBlank = True
 # if the series name is blank assume the directory is named after
 # the series.  Setting this to true will cause the 
 # promptSeriesNameIfBlank flag to be ignored.
-assumeDirIsSeries = False
+assumeDirIsSeries = True
 
 # if more than one match is found and we are in interactiveMode
 # these flags determine if the Issue description and/or
@@ -144,6 +144,7 @@ def readComment(filename):
 	cbz = zipfile.ZipFile(archivefile)
 	cbzComment = cbz.comment
 	cbz.close()
+	cbzComment = cbzComment.replace('\r\n','')
 	return cbzComment	
 
 def searchForIssue(seriesName, issueNumber):
@@ -177,9 +178,11 @@ def readCBI(dir, filename):
 	return comicBookInfo
 
 def getSeriesName(comicBookInfo, directory, filename):
-	thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
+	try: thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
+	except: thisSeries = ''
 	if thisSeries == '' and assumeDirIsSeries == True :
 		thisSeries = os.path.basename(directory)
+		print 'Assuming series name is [%s]' % thisSeries
 	if thisSeries == '' and interactiveMode == True and promptSeriesNameIfBlank == True :
 		print directory
 		print filename
@@ -188,7 +191,8 @@ def getSeriesName(comicBookInfo, directory, filename):
 	return thisSeries
 
 def getIssueNumber(comicBookInfo, directory, filename):
-	thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
+	try:thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
+	except: thisIssue = ''
 	if thisIssue == '' and interactiveMode == True:
 		thisIssue = raw_input('No issue number found.  Enter the issue number:\t')
 	# TODO if there is a single number in the filename, assume that is the issue number
@@ -251,6 +255,7 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 					# print currentVolume['results']['start_year']
 					print "####################################\n\n"			
 					print "Issue ID:\t%s" % j['id']
+					print "Issue:\t%s" % j['issue_number']
 					print "Issue Name:\t%s" % j['name']
 					print "Issue URL:\t%s" % j['api_detail_url']
 					print "Volume Name:\t%s" % j['volume']['name']
@@ -266,7 +271,6 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 						issueDescription = stripTags(j['description']) 
 						issueDescription = issueDescription[:maxDescriptionLength]
 						print "Issue Description:\t%s\n" % issueDescription 
-					print "------------------------------------"
 
  				print "####################################\n\n"			
 				issueId = raw_input('Enter the Issue ID from the list above: ')
@@ -278,6 +282,18 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 		issueId = 0 
 
 	return issueId
+
+def writeComicBookInfo(comicBookInfo, dir, filename):
+	# mark the comment as last-edited-by this app
+	comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
+	comicBookInfo['appID'] = __program__ + '/' + __version__
+	print 'Writing back updated ComicBookInfo for ' + filename
+	process = subprocess.Popen(['/usr/bin/zip', os.path.join(dir, filename), '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+	# need a short wait so zip can get ready for our comment
+	time.sleep(1)
+	# dumping without an indent value seems to cause problems unless you've recompiled zip with longer line support
+	json.dump(comicBookInfo, process.stdin, indent=0)
+
 
 def processDir(dir):
 
@@ -325,7 +341,7 @@ def processDir(dir):
 			if purgeExistingCredits == True:
 				credits = []
 			else:
-				credits = comicBookInfo['ComicBookInfo/1.0']['tags']
+				credits = comicBookInfo['ComicBookInfo/1.0']['credits']
 
 			if updateCredits == True:
 				comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(credits, cvIssueResults)
@@ -350,16 +366,19 @@ def processDir(dir):
 
 				comicBookInfo['ComicBookInfo/1.0']['tags'] = tags
 
-			# mark the comment as last-edited-by this app
-			comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
-			comicBookInfo['appID'] = __program__ + '/' + __version__
-	    	        print 'Writing back updated ComicBookInfo for ' + filename
-			process = subprocess.Popen(['/usr/bin/zip', os.path.join(dir, filename), '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-			# need a short wait so zip can get ready for our comment
-			time.sleep(1)
-			# dumping without an indent value seems to cause problems unless you've recompiled zip with longer line support
-			#print comicBookInfo
-			json.dump(comicBookInfo, process.stdin, indent=0)
+
+			writeComicBookInfo(comicBookInfo, dir, filename)
+
+			## mark the comment as last-edited-by this app
+			#comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
+			#comicBookInfo['appID'] = __program__ + '/' + __version__
+	    	        #print 'Writing back updated ComicBookInfo for ' + filename
+			#process = subprocess.Popen(['/usr/bin/zip', os.path.join(dir, filename), '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+			## need a short wait so zip can get ready for our comment
+			#time.sleep(1)
+			## dumping without an indent value seems to cause problems unless you've recompiled zip with longer line support
+			#json.dump(comicBookInfo, process.stdin, indent=0)
+
 			print 'Done with ' + filename
 	for subdir in dirList:
 		processDir(os.path.join(dir, subdir))
