@@ -33,11 +33,22 @@
       -c, --credits		get comic book credits
 """
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.2b'
+__version__ = '0.2c'
 __author__ = "Andre (andre.messier@gmail.com); Sasha (sasha@goldnet.ca)"
-__date__ = "2010-12-07"
+__date__ = "2010-12-09"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
 __license__ = "GPL"
+
+import sys
+import urllib
+import subprocess
+import zipfile
+import time
+import decimal 
+import getopt
+import os.path
+try: import simplejson as json
+except ImportError: import json
 
 
 APIKEY="e75dd8dd18cfdd80e1638de4262ed47ed890b96e"
@@ -68,7 +79,7 @@ promptSeriesNameIfBlank = True
 # if the series name is blank assume the directory is named after
 # the series.  Setting this to true will cause the 
 # promptSeriesNameIfBlank flag to be ignored.
-assumeDirIsSeries = True
+assumeDirIsSeries = False
 
 # if more than one match is found and we are in interactiveMode
 # these flags determine if the Issue description and/or
@@ -82,6 +93,7 @@ displaySeriesDescriptionOnDupe = True
 maxDescriptionLength = 500
 
 searchSubFolders = True
+showSearchProgress = False
 
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
@@ -90,16 +102,6 @@ issueURL = baseURL + 'issue'
 # maybe we'll add .cbr support?
 fileExtList = [".cbz"]
 
-import sys
-import urllib
-import subprocess
-import zipfile
-import time
-import decimal 
-import getopt
-import os.path
-try: import simplejson as json
-except ImportError: import json
 
 def usage ():
 	print __program__ + " " +__version__+ " (" + __date__ + ")"
@@ -147,12 +149,74 @@ def readComment(filename):
 	cbzComment = cbzComment.replace('\r\n','')
 	return cbzComment	
 
-def searchForIssue(seriesName, issueNumber):
-	cvSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(seriesName + ' ' + issueNumber) + '&resources=issue' 
-	#cvSearchURL = cvSearchURL + '&field_list=name,start_year,id'
-	cvSearchURL = cvSearchURL + '&format=json'
-	cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
-	return cvSearchResults
+def searchForIssue(seriesName, issueNumber, seriesId):
+	issueList = {}
+	cvBaseSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(seriesName + ' ' + issueNumber) + '&resources=issue' 
+	#TODO: after this is working, limit the results to the fields we use
+	#cvBaseSearchURL = cvBaseSearchURL + '&field_list=name,start_year,id'
+	cvBaseSearchURL = cvBaseSearchURL + '&format=json'
+	offset = 0
+	resultCount = 20
+	cvSearchURL = cvBaseSearchURL
+	print 'Please wait while I query ComicVine for the Issue'
+	i = 0
+	while resultCount >= 20:
+		cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
+		resultCount = cvSearchResults['number_of_page_results']
+		for issue in cvSearchResults['results']:
+			i = i + 1
+			if showSearchProgress == True:
+				print i
+			if issue['resource_type'] == 'issue' and str(issue['volume']['id']) == str(seriesId):
+				currentIssueD = decimal.Decimal(str(issue['issue_number']))
+				currentIssueI = int(currentIssueD)
+				currentIssue = str(currentIssueI).rstrip()
+				if currentIssue == issueNumber:
+					comic = {}
+					comic['id'] = issue['id']
+					comic['name'] = issue['name']
+					comic['description'] = issue['description']
+					issueList[issue['id']] = comic
+		offset = offset + resultCount
+		cvSearchURL = cvBaseSearchURL + '&offset=' + str(offset)
+	return issueList
+
+def searchForSeries(seriesName, offset=0):
+	seriesList = {}
+	cvBaseSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(seriesName) 
+	csBaseSearchURL = searchURL + '&resources=volume'
+	cvBaseSearchURL = cvBaseSearchURL + '&field_list=volume,name,start_year,id,description'
+	cvBaseSearchURL = cvBaseSearchURL + '&format=json'
+	offset = 0
+	resultCount = 20
+	cvSearchURL = cvBaseSearchURL 
+	print 'Please wait while I query ComicVine for the Series'
+	i = 0
+	while resultCount >= 20:
+		cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
+		resultCount = cvSearchResults['number_of_page_results']
+		for series in cvSearchResults['results']:
+			i = i + 1
+			if showSearchProgress == True: 
+				print i
+			if series['resource_type'] == 'volume':
+				volume = {}
+				volume['id'] = series['id']
+				volume['name'] = series['name']
+				volume['start_year'] = series['start_year']
+				volume['description'] =  stripTags(series['description'])
+				seriesList[series['id']] = volume					
+		offset = offset + resultCount
+		cvSearchURL = cvBaseSearchURL + '&offset=' + str(offset)
+	return seriesList
+	
+def displaySeriesInfo(seriesList):
+	for volume in seriesList:
+		print 'Series Id"\t%s' % seriesList[volume]['id']
+		print 'Name:\t%s' % seriesList[volume]['name']
+		print 'Description:\t%s' % seriesList[volume]['description']
+		print 'First Published:\t%s' % seriesList[volume]['start_year']
+		print '****'
 
 def getIssueData(issueId):
 	cvIssueURL = issueURL + '/' + str(issueId) + '/' +  '?api_key=' + APIKEY + '&format=json'
@@ -305,10 +369,33 @@ def processDir(dir):
 		comicBookInfo = readCBI(dir, filename)
 
 		thisSeries = getSeriesName(comicBookInfo, dir, filename)
-		thisIssue = getIssueNumber(comicBookInfo, dir, filename)
 
-		cvSearchResults = searchForIssue(thisSeries, thisIssue)
-		issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
+		seriesResults = searchForSeries(thisSeries)
+		if len(seriesResults) == 0:
+			'No series with that name found.'
+			break
+		if len(seriesResults) == 1:
+			'this is the series'
+			for id in seriesResults:
+				seriesId = id
+		if len(seriesResults) > 1:
+			displaySeriesInfo(seriesResults)
+			seriesId = raw_input('Enter the Series ID from the list above: ')
+
+
+		thisIssue = getIssueNumber(comicBookInfo, dir, filename)
+		issueResults = searchForIssue(thisSeries, thisIssue, seriesId)
+		if len(issueResults) == 0 :
+			'Unable to find that issue.'
+			break
+		if len(issueResults) == 1 :
+			for id in issueResults:
+				issueId = id
+		if len(issueResults) > 1:
+			displayIssueInfo(issueResults)
+			issueId = raw_input('Enter the Issue ID from the list above: ')
+
+		#issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
 		if issueId == 0:
 			print 'Unable to find the issue id.  Sorry'
 			if interactiveMode != True:
@@ -366,18 +453,7 @@ def processDir(dir):
 
 				comicBookInfo['ComicBookInfo/1.0']['tags'] = tags
 
-
 			writeComicBookInfo(comicBookInfo, dir, filename)
-
-			## mark the comment as last-edited-by this app
-			#comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
-			#comicBookInfo['appID'] = __program__ + '/' + __version__
-	    	        #print 'Writing back updated ComicBookInfo for ' + filename
-			#process = subprocess.Popen(['/usr/bin/zip', os.path.join(dir, filename), '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-			## need a short wait so zip can get ready for our comment
-			#time.sleep(1)
-			## dumping without an indent value seems to cause problems unless you've recompiled zip with longer line support
-			#json.dump(comicBookInfo, process.stdin, indent=0)
 
 			print 'Done with ' + filename
 	for subdir in dirList:
