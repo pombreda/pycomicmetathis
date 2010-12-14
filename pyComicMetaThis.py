@@ -54,7 +54,7 @@ except ImportError: import json
 APIKEY="e75dd8dd18cfdd80e1638de4262ed47ed890b96e"
 
 updateTags = True
-updateCredits = True
+updateCredits = False
 # setting purgeExistingTags or purgeExistingCredits to False 
 # could be dangerous if you run this on the same files 
 # repeatedly as the tags will be duplicated
@@ -90,9 +90,10 @@ displaySeriesDescriptionOnDupe = True
 # how many characters of the issues/series description to show
 # if the includeDescriptionAsComment is true, this will also
 # limit how many characters are used there
-maxDescriptionLength = 500
+#maxDescriptionLength = 242
+maxDescriptionLength = 800
 
-searchSubFolders = True
+searchSubFolders = False
 showSearchProgress = False
 
 baseURL="http://api.comicvine.com/"
@@ -211,11 +212,18 @@ def searchForSeries(seriesName, offset=0):
 	return seriesList
 	
 def displaySeriesInfo(seriesList):
-	for volume in seriesList:
-		print 'Series Id"\t%s' % seriesList[volume]['id']
-		print 'Name:\t%s' % seriesList[volume]['name']
-		print 'Description:\t%s' % seriesList[volume]['description']
-		print 'First Published:\t%s' % seriesList[volume]['start_year']
+	sortedList = []
+	for key in seriesList:
+		sortedList.append((seriesList[key]['start_year'], seriesList[key]['id'], seriesList[key]['name'], seriesList[key]['description']))
+	import operator
+	index = operator.itemgetter(0)
+	sortedList.sort(key=index)
+
+	for volume in sortedList:
+		print 'Series Id"\t%s' % volume[1]
+		print 'Name:\t%s' % volume[2]
+		print 'Description:\t%s' % volume[3]
+		print 'First Published:\t%s' % volume[0]
 		print '****'
 
 def getIssueData(issueId):
@@ -348,6 +356,9 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 	return issueId
 
 def writeComicBookInfo(comicBookInfo, dir, filename):
+	#TODO: write JSON object to a file
+	#TODO: have zip import the comment from the file
+	#TODO: delete the JSON file
 	# mark the comment as last-edited-by this app
 	comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
 	comicBookInfo['appID'] = __program__ + '/' + __version__
@@ -419,8 +430,14 @@ def processDir(dir):
 			comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
 			if includeDescriptionAsComment == True:
 				issueDescription = stripTags(cvIssueResults['results']['description'])
+				print issueDescription[242]
+				print issueDescription[243]
+				print issueDescription[244]
+				print issueDescription[245]
+
 				issueDescription = issueDescription[:maxDescriptionLength]
-				comicBookInfo['ComicBookInfo/1.0']['comment'] = cvIssueResults['results']['description']
+				comicBookInfo['ComicBookInfo/1.0']['comment'] = issueDescription
+
 			# personal perference to make volume the year the volume started
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
 
