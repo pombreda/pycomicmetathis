@@ -54,7 +54,7 @@ except ImportError: import json
 APIKEY="e75dd8dd18cfdd80e1638de4262ed47ed890b96e"
 
 updateTags = True
-updateCredits = False
+updateCredits = True
 # setting purgeExistingTags or purgeExistingCredits to False 
 # could be dangerous if you run this on the same files 
 # repeatedly as the tags will be duplicated
@@ -90,11 +90,17 @@ displaySeriesDescriptionOnDupe = True
 # how many characters of the issues/series description to show
 # if the includeDescriptionAsComment is true, this will also
 # limit how many characters are used there
-#maxDescriptionLength = 242
 maxDescriptionLength = 800
 
 searchSubFolders = False
 showSearchProgress = False
+
+# if you've recompiled zip with support for longer comments, set the 
+# zipCommand variable to the path to the new version
+# without this, ComicBookInfo records over 256 characters
+# will not work properly
+#zipCommand = "/bin/ziplong"
+zipCommand = "zip"
 
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
@@ -356,19 +362,29 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 	return issueId
 
 def writeComicBookInfo(comicBookInfo, dir, filename):
-	#TODO: write JSON object to a file
-	#TODO: have zip import the comment from the file
-	#TODO: delete the JSON file
+	#write JSON object to a file
+	jsonFile = os.path.join(dir, filename) + '.json'
+	with open(jsonFile , mode='w') as f:
+		json.dump(comicBookInfo,f)
+
 	# mark the comment as last-edited-by this app
 	comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
 	comicBookInfo['appID'] = __program__ + '/' + __version__
 	print 'Writing back updated ComicBookInfo for ' + filename
-	process = subprocess.Popen(['/usr/bin/zip', os.path.join(dir, filename), '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-	# need a short wait so zip can get ready for our comment
-	time.sleep(1)
-	# dumping without an indent value seems to cause problems unless you've recompiled zip with longer line support
-	json.dump(comicBookInfo, process.stdin, indent=0)
 
+	cmdLine = zipCommand + ' "' + os.path.join(dir, filename) + '" -z < "' + jsonFile + '"'
+	print cmdLine
+	subprocess.Popen(cmdLine, shell=True)
+	#subprocess.Popen.wait()
+
+	#process = subprocess.Popen(['/usr/bin/zip', os.path.join(dir, filename), '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+	## need a short wait so zip can get ready for our comment
+	time.sleep(3)
+	## dumping without an indent value seems to cause problems unless you've recompiled zip with longer line support
+	#json.dump(comicBookInfo, process.stdin, indent=0)
+
+	#delete the JSON file
+	os.remove(jsonFile)
 
 def processDir(dir):
 
@@ -431,7 +447,7 @@ def processDir(dir):
 			if includeDescriptionAsComment == True:
 				issueDescription = stripTags(cvIssueResults['results']['description'])
 				issueDescription = issueDescription[:maxDescriptionLength]
-				comicBookInfo['ComicBookInfo/1.0']['comment'] = issueDescription
+				comicBookInfo['ComicBookInfo/1.0']['comments'] = issueDescription
 
 			# personal perference to make volume the year the volume started
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
