@@ -430,11 +430,6 @@ def processDir(dir):
 			comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
 			if includeDescriptionAsComment == True:
 				issueDescription = stripTags(cvIssueResults['results']['description'])
-				print issueDescription[242]
-				print issueDescription[243]
-				print issueDescription[244]
-				print issueDescription[245]
-
 				issueDescription = issueDescription[:maxDescriptionLength]
 				comicBookInfo['ComicBookInfo/1.0']['comment'] = issueDescription
 
