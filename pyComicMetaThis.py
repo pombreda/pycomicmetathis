@@ -64,7 +64,8 @@ includeCharactersAsTags = True
 includeItemsAsTags = True
 includeDescriptionAsComment = True
 # interactiveMode will prompt the user for series and issue info 
-# if it can't be determined automatically.  
+# if it can't be determined automatically.  If interactiveMode
+# is turned off, the file will be skipped
 interactiveMode = True
 
 # if interactiveMode is disabled, any issues that can't be
@@ -101,6 +102,13 @@ showSearchProgress = False
 # will not work properly
 #zipCommand = "/bin/ziplong"
 zipCommand = "zip"
+
+# as an optimization you can set the useSeriesCacheFile value
+# to true.  This will save the first seriesId found in 
+# a folder in a file called seriesId.txt.  All subsequent
+# files in that folder will will be assumed to be in the 
+# same series
+useSeriesCacheFile = True
 
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
@@ -160,7 +168,7 @@ def searchForIssue(seriesName, issueNumber, seriesId):
 	issueList = {}
 	cvBaseSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(seriesName + ' ' + issueNumber) + '&resources=issue' 
 	#TODO: after this is working, limit the results to the fields we use
-	#cvBaseSearchURL = cvBaseSearchURL + '&field_list=name,start_year,id'
+	#cvBaseSearchURL = cvBaseSearchURL + '&field_list=name,start_year,id,description,issue_number'
 	cvBaseSearchURL = cvBaseSearchURL + '&format=json'
 	offset = 0
 	resultCount = 20
@@ -192,7 +200,7 @@ def searchForSeries(seriesName, offset=0):
 	seriesList = {}
 	cvBaseSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(seriesName) 
 	csBaseSearchURL = searchURL + '&resources=volume'
-	cvBaseSearchURL = cvBaseSearchURL + '&field_list=volume,name,start_year,id,description'
+	#cvBaseSearchURL = cvBaseSearchURL + '&field_list=volume,name,start_year,id,description'
 	cvBaseSearchURL = cvBaseSearchURL + '&format=json'
 	offset = 0
 	resultCount = 20
@@ -217,6 +225,7 @@ def searchForSeries(seriesName, offset=0):
 		cvSearchURL = cvBaseSearchURL + '&offset=' + str(offset)
 	return seriesList
 	
+
 def displaySeriesInfo(seriesList):
 	sortedList = []
 	for key in seriesList:
@@ -228,7 +237,8 @@ def displaySeriesInfo(seriesList):
 	for volume in sortedList:
 		print 'Series Id"\t%s' % volume[1]
 		print 'Name:\t%s' % volume[2]
-		print 'Description:\t%s' % volume[3]
+		if displaySeriesDescriptionOnDupe == True:
+			print 'Description:\t%s' % volume[3]
 		print 'First Published:\t%s' % volume[0]
 		print '****'
 
@@ -239,34 +249,78 @@ def getIssueData(issueId):
 
 def getVolumeDataFromURL(volumeURL):
 	volumeURL = volumeURL + '?api_key=' + APIKEY  + '&format=json'
+	#TODO: add field limit so we only get the fields we are going to use
 	cvVolumeResults = json.load(urllib.urlopen(volumeURL))
 	return cvVolumeResults
 
+def getVolumeNameFromID(seriesId):
+	volumeURL = baseURL + 'volume/' + seriesId + '/?api_key=' + APIKEY + '&field_list=name&format=json'
+	cvVolumeResults = json.load(urllib.urlopen(volumeURL))
+	volumeName = cvVolumeResults['results']['name']
+	return volumeName
+
 def readCBI(dir, filename):
 	# read the meta data from the zipfiles comment field
-	print os.path.join(dir,filename)
 	cbzComment = readComment(os.path.join(dir, filename))
 	if len(cbzComment) == 0:
 		print 'No comment in zip file.'
 		comicBookInfo =  blankCBI()
 	else:
-		if len(cbzComment) > 0 and cbzComment.startswith('{') == False:
-			print 'No ComicBookInfo header found.  We should create one, but what should it contain?'
-		comicBookInfo = json.loads(cbzComment)
+		try:
+			comicBookInfo = json.loads(cbzComment)
+		except: 
+			comicBookInfo = blankCBI()
 	return comicBookInfo
 
-def getSeriesName(comicBookInfo, directory, filename):
+def getSeries(comicBookInfo, directory, filename):
 	try: thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
 	except: thisSeries = ''
+
+	print 'thisSeries:\t%s' % thisSeries		
+
+	thisSeriesId = 0
+	readSeriesId = thisSeriesId
+	if useSeriesCacheFile == True:
+		if os.path.exists(os.path.join(directory, 'seriesId.txt')) == True:
+			print 'Found a seriesId.txt file in this directory'
+			with open(os.path.join(directory, 'seriesId.txt'), 'r') as cacheFile:
+				readSeriesId = cacheFile.readline()
+			if readSeriesId == '':	
+				readSeriesId = 0
+			else:
+				print 'Read series Id is %s' % readSeriesId		
+			thisSeriesId = readSeriesId
+
+			if thisSeriesId != '' and thisSeriesId != 0:
+				thisSeries = getVolumeNameFromID(thisSeriesId)
+				print 'That series is %s' % thisSeries
+
 	if thisSeries == '' and assumeDirIsSeries == True :
 		thisSeries = os.path.basename(directory)
 		print 'Assuming series name is [%s]' % thisSeries
 	if thisSeries == '' and interactiveMode == True and promptSeriesNameIfBlank == True :
-		print directory
-		print filename
 		print 'Processing %s:' % os.path.join(directory, filename)
 		thisSeries = raw_input('No series name found.  Enter the series name:\t')
-	return thisSeries
+	
+	if interactiveMode == True and thisSeriesId == 0:	
+		seriesResults = searchForSeries(thisSeries)
+		if len(seriesResults) == 0:
+			'No series with that name found.'
+		if len(seriesResults) == 1:
+			'Found the series'
+			for id in seriesResults:
+				thisSeriesId = id
+		if len(seriesResults) > 1:
+			displaySeriesInfo(seriesResults)
+			thisSeriesId = raw_input('Enter the Series ID from the list above: z')
+		
+	# if we've got a new series Id, we should update the cacheFile
+	if thisSeriesId != readSeriesId and useSeriesCacheFile == True:
+		print 'caching the series id...'
+		with open(os.path.join(directory, 'seriesId.txt'), 'w') as cacheFile:
+			cacheFile.write(str(thisSeriesId))
+		print 'done caching the series id'
+	return thisSeries, thisSeriesId
 
 def getIssueNumber(comicBookInfo, directory, filename):
 	try:thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
@@ -395,20 +449,7 @@ def processDir(dir):
 		
 		comicBookInfo = readCBI(dir, filename)
 
-		thisSeries = getSeriesName(comicBookInfo, dir, filename)
-
-		seriesResults = searchForSeries(thisSeries)
-		if len(seriesResults) == 0:
-			'No series with that name found.'
-			break
-		if len(seriesResults) == 1:
-			'this is the series'
-			for id in seriesResults:
-				seriesId = id
-		if len(seriesResults) > 1:
-			displaySeriesInfo(seriesResults)
-			seriesId = raw_input('Enter the Series ID from the list above: ')
-
+		thisSeries, seriesId  = getSeries(comicBookInfo, dir, filename)
 
 		thisIssue = getIssueNumber(comicBookInfo, dir, filename)
 		issueResults = searchForIssue(thisSeries, thisIssue, seriesId)
