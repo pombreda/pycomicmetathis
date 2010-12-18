@@ -312,7 +312,7 @@ def getSeries(comicBookInfo, directory, filename):
 				thisSeriesId = id
 		if len(seriesResults) > 1:
 			displaySeriesInfo(seriesResults)
-			thisSeriesId = raw_input('Enter the Series ID from the list above: z')
+			thisSeriesId = raw_input('Enter the Series ID from the list above:\t')
 		
 	# if we've got a new series Id, we should update the cacheFile
 	if thisSeriesId != readSeriesId and useSeriesCacheFile == True:
