@@ -482,7 +482,11 @@ def processDir(dir):
 			comicBookInfo['ComicBookInfo/1.0']['series'] = thisSeries
 			comicBookInfo['ComicBookInfo/1.0']['issue'] = thisIssue
 			comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['name']
-			comicBookInfo['ComicBookInfo/1.0']['publisher'] = cvVolumeResults['results']['publisher']['name']
+			print cvVolumeResults
+			try:
+				comicBookInfo['ComicBookInfo/1.0']['publisher'] = cvVolumeResults['results']['publisher']['name']
+			except:
+				print 'No Publisher in metadata'
 			comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
 			comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
 			if includeDescriptionAsComment == True:
@@ -491,7 +495,8 @@ def processDir(dir):
 				comicBookInfo['ComicBookInfo/1.0']['comments'] = issueDescription
 
 			# personal perference to make volume the year the volume started
-			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
+			if cvVolumeResults['results']['start_year'] != 'none':
+				comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
 
 
 			if purgeExistingCredits == True:
