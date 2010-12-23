@@ -136,9 +136,14 @@ def blankCBI():
 	return emptyCBIContainer
 
 def remove_html_tags(data):
-    p = re.compile(r'<[^<]*?>')
-    return p.sub('', data)
+	p = re.compile(r'<[^<]*?>')
+	datastring = p.sub('',data)
+	datastring = remove_html_escapes(datastring)
+	return datastring
 
+def remove_html_escapes(data):
+	p = re.compile(r'&....;')
+	return p.sub(' ',data)
 
 def getfiles(directory):
 	entries = os.listdir(directory)
