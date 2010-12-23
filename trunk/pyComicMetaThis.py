@@ -33,9 +33,9 @@
       -c, --credits		get comic book credits
 """
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.2c'
+__version__ = '0.2d'
 __author__ = "Andre (andre.messier@gmail.com); Sasha (sasha@goldnet.ca)"
-__date__ = "2010-12-09"
+__date__ = "2010-12-23"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
 __license__ = "GPL"
 
@@ -161,7 +161,7 @@ def readComment(dir, filename):
 	# I was using pythons ZipFile object but it doesn't seem to handle zipcomments well
 
 	# read the zip comment into a temp text file
-	txtFile = os.path.join(dir, filename) + '.txt'
+	txtFile = str.replace(os.path.join(dir, filename) + '.txt',' ','\ ')
 	cmdLine = ' unzip -z "' + os.path.join(dir, filename) + '" > "' + txtFile + '"'
 	#p1 = subprocess.Popen(['unzip','-z','"' + os.path.join(dir,filename) + '"'], stdout=PIPE)
 	#p2 = subprocess.Popen(["tr","-d","\r"], stdin=p1.stdout, stdout=PIPE)
@@ -170,8 +170,8 @@ def readComment(dir, filename):
 	os.waitpid(p.pid,0)
 
 	# strip the first line since it just tells us the filename and isn't part of the JSON header
-	txtFile2 = os.path.join(dir, filename) + '_.txt'
-	cmdLine = 'sed \'1d\' ' + txtFile  + '  > ' + txtFile2 
+	txtFile2 = str.replace(os.path.join(dir, filename) + '_.txt',' ','\ ')
+	cmdLine = 'sed \'1d\' "' + txtFile  + '"  > "' + txtFile2 + '"' 
 	#cmdLine = 'tr -d \'\\n\' <  "' + txtFile  + '" > "' + txtFile2 + '"'
 	#print cmdLine
 	p = subprocess.Popen(cmdLine, shell=True)
@@ -180,7 +180,9 @@ def readComment(dir, filename):
 
 	# strip newline characters from the file
 	# which should leave us with the json 
-	jsonFile = os.path.join(dir, filename) + '.json'
+	#jsonFile = os.path.join(dir, filename) + '.json'
+	jsonFile = str.replace(os.path.join(dir, filename) + '.json',' ','\ ')
+
 	cmdLine = 'tr -d \'\\n\' <  "' + txtFile2  + '" > "' + jsonFile + '"'
 	#cmdLine = 'sed \'1d\' ' + txtFile2  + '  > ' + jsonFile 
 	#print cmdLine
@@ -462,7 +464,7 @@ def writeComicBookInfo(comicBookInfo, dir, filename):
 	comicBookInfo['appID'] = __program__ + '/' + __version__
 
 	#write JSON object to a file
-	jsonFile = os.path.join(dir, filename) + '.json'
+	jsonFile = str.replace(os.path.join(dir, filename) + '.json',' ','\ ')
 	with open(jsonFile , mode='w') as f:
 		json.dump(comicBookInfo,f,indent=0)
 
