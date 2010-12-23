@@ -125,12 +125,13 @@ def usage ():
 
 def blankCBI():
 	emptyCBIContainer = {}
-	emptyCBIContainer['appID'] = __program__ + '/' + __version__
-	emptyCBIContainer['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
 	emptyCBI = {}
 	emptyCBI['series'] = ''
 	emptyCBI['issue'] = ''
 	emptyCBIContainer['ComicBookInfo/1.0'] = emptyCBI
+	emptyCBIContainer['appID'] = __program__ + '/' + __version__
+	emptyCBIContainer['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
+
 	return emptyCBIContainer
 
 def stripTags(text): 
@@ -156,12 +157,50 @@ def getfiles(directory):
 		dirList.sort()	
 	return (fileList,dirList)
 
-def readComment(filename):
-	archivefile = file(filename)
-	cbz = zipfile.ZipFile(archivefile)
-	cbzComment = cbz.comment
-	cbz.close()
+def readComment(dir, filename):
+	# I was using pythons ZipFile object but it doesn't seem to handle zipcomments well
+
+	# read the zip comment into a temp text file
+	txtFile = os.path.join(dir, filename) + '.txt'
+	cmdLine = ' unzip -z "' + os.path.join(dir, filename) + '" > "' + txtFile + '"'
+	#p1 = subprocess.Popen(['unzip','-z','"' + os.path.join(dir,filename) + '"'], stdout=PIPE)
+	#p2 = subprocess.Popen(["tr","-d","\r"], stdin=p1.stdout, stdout=PIPE)
+	#print cmdLine
+	p = subprocess.Popen(cmdLine, shell=True)
+	os.waitpid(p.pid,0)
+
+	# strip the first line since it just tells us the filename and isn't part of the JSON header
+	txtFile2 = os.path.join(dir, filename) + '_.txt'
+	cmdLine = 'sed \'1d\' ' + txtFile  + '  > ' + txtFile2 
+	#cmdLine = 'tr -d \'\\n\' <  "' + txtFile  + '" > "' + txtFile2 + '"'
+	#print cmdLine
+	p = subprocess.Popen(cmdLine, shell=True)
+	os.waitpid(p.pid,0)
+	os.remove(txtFile)
+
+	# strip newline characters from the file
+	# which should leave us with the json 
+	jsonFile = os.path.join(dir, filename) + '.json'
+	cmdLine = 'tr -d \'\\n\' <  "' + txtFile2  + '" > "' + jsonFile + '"'
+	#cmdLine = 'sed \'1d\' ' + txtFile2  + '  > ' + jsonFile 
+	#print cmdLine
+	p = subprocess.Popen(cmdLine, shell=True)
+	os.waitpid(p.pid,0)
+	os.remove(txtFile2)	
+
+	# read the comment file into a variable and strip the newlines
+	time.sleep(2)	
+	cbzComment = ''
+	file = open(jsonFile, 'r')
+	for line in file:
+		cbzComment += line.strip()
+
+	#archivefile = file(filename)
+	#cbz = zipfile.ZipFile(archivefile)
+	#cbzComment = cbz.comment
+	#cbz.close()
 	cbzComment = cbzComment.replace('\r\n','')
+	#print cbzComment
 	return cbzComment	
 
 def searchForIssue(seriesName, issueNumber, seriesId):
@@ -261,7 +300,7 @@ def getVolumeNameFromID(seriesId):
 
 def readCBI(dir, filename):
 	# read the meta data from the zipfiles comment field
-	cbzComment = readComment(os.path.join(dir, filename))
+	cbzComment = readComment(dir, filename)
 	if len(cbzComment) == 0:
 		print 'No comment in zip file.'
 		comicBookInfo =  blankCBI()
@@ -416,23 +455,27 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 	return issueId
 
 def writeComicBookInfo(comicBookInfo, dir, filename):
+	# mark the comment as last-edited-by this app
+	cbi = comicBookInfo['ComicBookInfo/1.0']
+	comicBookInfo['ComicBookInfo/1.0'] = cbi
+	comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
+	comicBookInfo['appID'] = __program__ + '/' + __version__
+
 	#write JSON object to a file
 	jsonFile = os.path.join(dir, filename) + '.json'
 	with open(jsonFile , mode='w') as f:
-		json.dump(comicBookInfo,f)
+		json.dump(comicBookInfo,f,indent=0)
 
-	# mark the comment as last-edited-by this app
-	comicBookInfo['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
-	comicBookInfo['appID'] = __program__ + '/' + __version__
+	#pauseHere = raw_input('Press Enter')
+
 	print 'Writing back updated ComicBookInfo for ' + filename
 
 	cmdLine = zipCommand + ' "' + os.path.join(dir, filename) + '" -z < "' + jsonFile + '"'
-	print cmdLine
-	subprocess.Popen(cmdLine, shell=True)
-	#subprocess.Popen.wait()
+	#print cmdLine
+	subprocess.Popen(cmdLine, shell=True, stdout = open(os.devnull, 'w'))
 
 	#process = subprocess.Popen(['/usr/bin/zip', os.path.join(dir, filename), '-z' ], shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-	## need a short wait so zip can get ready for our comment
+	# need a short wait so zip can get ready for our comment
 	time.sleep(3)
 	## dumping without an indent value seems to cause problems unless you've recompiled zip with longer line support
 	#json.dump(comicBookInfo, process.stdin, indent=0)
@@ -482,17 +525,23 @@ def processDir(dir):
 			comicBookInfo['ComicBookInfo/1.0']['series'] = thisSeries
 			comicBookInfo['ComicBookInfo/1.0']['issue'] = thisIssue
 			comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['name']
-			print cvVolumeResults
+			#print cvVolumeResults
+
 			try:
 				comicBookInfo['ComicBookInfo/1.0']['publisher'] = cvVolumeResults['results']['publisher']['name']
 			except:
 				print 'No Publisher in metadata'
-			comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
+			if cvIssueResults['results']['publish_month'] == None:
+				print 'No Publication Month found'
+				comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = 1
+			else:
+				comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
 			comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
 			if includeDescriptionAsComment == True:
 				issueDescription = stripTags(cvIssueResults['results']['description'])
 				issueDescription = issueDescription[:maxDescriptionLength]
-				comicBookInfo['ComicBookInfo/1.0']['comments'] = issueDescription
+				if len(issueDescription) > 0:
+					comicBookInfo['ComicBookInfo/1.0']['comments'] = issueDescription
 
 			# personal perference to make volume the year the volume started
 			if cvVolumeResults['results']['start_year'] != 'none':
