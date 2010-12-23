@@ -47,6 +47,7 @@ import time
 import decimal 
 import getopt
 import os.path
+import re
 try: import simplejson as json
 except ImportError: import json
 
@@ -134,17 +135,10 @@ def blankCBI():
 
 	return emptyCBIContainer
 
-def stripTags(text): 
-     finished = 0 
-     while not finished: 
-         finished = 1 
-         start = text.find("<") 
-         if start >= 0: 
-             stop = text[start:].find(">") 
-             if stop >= 0: 
-                 text = text[:start] + text[start+stop+1:] 
-                 finished = 0 
-     return text 
+def remove_html_tags(data):
+    p = re.compile(r'<[^<]*?>')
+    return p.sub('', data)
+
 
 def getfiles(directory):
 	entries = os.listdir(directory)
@@ -260,7 +254,7 @@ def searchForSeries(seriesName, offset=0):
 				volume['id'] = series['id']
 				volume['name'] = series['name']
 				volume['start_year'] = series['start_year']
-				volume['description'] =  stripTags(series['description'])
+				volume['description'] =  remove_html_tags(series['description'])
 				seriesList[series['id']] = volume					
 		offset = offset + resultCount
 		cvSearchURL = cvBaseSearchURL + '&offset=' + str(offset)
@@ -435,13 +429,13 @@ def getIssueId(thisSeries, thisIssue, cvSearchResults):
 					print "Volume First Published:\t%s" % currentVolume['results']['start_year']
 					print "Volume URL:\t%s" % j['volume']['api_detail_url']
 					if displaySeriesDescriptionOnDupe == True:
-						volumeDescription = stripTags(currentVolume['results']['description'])
+						volumeDescription = remove_html_tags(currentVolume['results']['description'])
 						volumeDescription = volumeDescription[:maxDescriptionLength]
 						print "Volume Description:\t%s" % volumeDescription
 					publishDate = str(j['publish_month']) + '/' + str(j['publish_year'])
 					print "Issue Published:\t %s" % publishDate
 					if displayIssueDescriptionOnDupe == True:
-						issueDescription = stripTags(j['description']) 
+						issueDescription = remove_html_tags(j['description']) 
 						issueDescription = issueDescription[:maxDescriptionLength]
 						print "Issue Description:\t%s\n" % issueDescription 
 
@@ -540,7 +534,7 @@ def processDir(dir):
 				comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
 			comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
 			if includeDescriptionAsComment == True:
-				issueDescription = stripTags(cvIssueResults['results']['description'])
+				issueDescription = remove_html_tags(cvIssueResults['results']['description'])
 				issueDescription = issueDescription[:maxDescriptionLength]
 				if len(issueDescription) > 0:
 					comicBookInfo['ComicBookInfo/1.0']['comments'] = issueDescription
