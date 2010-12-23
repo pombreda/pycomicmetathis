@@ -49,7 +49,7 @@ import getopt
 import os.path
 import re
 try: import simplejson as json
-except ImportError: import simplejson
+except ImportError: import json
 
 
 APIKEY="e75dd8dd18cfdd80e1638de4262ed47ed890b96e"
@@ -142,8 +142,9 @@ def remove_html_tags(data):
 	return datastring
 
 def remove_html_escapes(data):
-	p = re.compile(r'&....;')
-	return p.sub(' ',data)
+	data = data.replace('&nbsp;',' ')
+	data = data.replace('&amp;','&')
+	return data
 
 def getfiles(directory):
 	entries = os.listdir(directory)
