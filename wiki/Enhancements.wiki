@@ -1,3 +1,4 @@
+#labels Featured
 = Future Enhancements  =
 
 This is a list of features I hope to implement at some point
