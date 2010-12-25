@@ -376,7 +376,7 @@ def getCredits(credits, cvIssueResults):
 		for role in person['roles']:
 			credit = {}
 			credit['person'] = person['name']
-			credit['role'] = role['role']
+			credit['role'] = role['role'].title()
 			credits.append(credit)
 	return credits
 
