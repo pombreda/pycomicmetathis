@@ -1,0 +1,11 @@
+= Future Enhancements  =
+
+This is a list of features I hope to implement at some point
+  * option to use comics.org Grand Comic Database instead of ComicVine (need an api or a screen scraper to do this)
+  * if a filename only has one number in it, assume it's the issue number
+  * option to skip issues that already have metadata.
+  
+
+= Contributions =
+
+Let me know if you would be interested in helping to implement any of these features or other features you'd like to see added.
