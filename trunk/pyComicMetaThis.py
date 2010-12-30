@@ -63,6 +63,7 @@ purgeExistingTags = True
 purgeExistingCredits = True
 includeCharactersAsTags = True
 includeItemsAsTags = True
+includeStoryArcAsTags = True
 includeDescriptionAsComment = True
 # interactiveMode will prompt the user for series and issue info 
 # if it can't be determined automatically.  If interactiveMode
@@ -117,7 +118,6 @@ issueURL = baseURL + 'issue'
 
 # maybe we'll add .cbr support?
 fileExtList = [".cbz"]
-
 
 def usage ():
 	print __program__ + " " +__version__+ " (" + __date__ + ")"
@@ -295,7 +295,7 @@ def getVolumeDataFromURL(volumeURL):
 	return cvVolumeResults
 
 def getVolumeNameFromID(seriesId):
-	volumeURL = baseURL + 'volume/' + seriesId + '/?api_key=' + APIKEY + '&field_list=name&format=json'
+	volumeURL = baseURL + 'volume/' + seriesId.strip() + '/?api_key=' + APIKEY + '&field_list=name&format=json'
 	cvVolumeResults = json.load(urllib.urlopen(volumeURL))
 	volumeName = cvVolumeResults['results']['name']
 	return volumeName
@@ -564,6 +564,13 @@ def processDir(dir):
 				tags = comicBookInfo['ComicBookInfo/1.0']['tags']
 
 			if updateTags == True:
+
+				if includeStoryArcAsTags == True:
+					# add story arcs to the tags
+					for k in cvIssueResults['results']['story_arc_credits']:
+						tag = {}
+						tags.append(k['name'])
+
 				if includeCharactersAsTags == True:			
 					# add characters to the tags
 					for k in cvIssueResults['results']['character_credits']:
