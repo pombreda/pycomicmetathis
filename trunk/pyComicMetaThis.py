@@ -68,7 +68,7 @@ includeDescriptionAsComment = True
 # interactiveMode will prompt the user for series and issue info 
 # if it can't be determined automatically.  If interactiveMode
 # is turned off, the file will be skipped
-interactiveMode = True
+interactiveMode = False
 
 # if interactiveMode is disabled, any issues that can't be
 # identified automatically will be logged to this file.
@@ -111,6 +111,10 @@ zipCommand = "zip"
 # files in that folder will will be assumed to be in the 
 # same series
 useSeriesCacheFile = True
+
+# amount of logging desired.  0 is none.  1 logs the filenames that
+# can't be processed.
+logLevel = 1
 
 baseURL="http://api.comicvine.com/"
 searchURL = baseURL + 'search'
@@ -496,10 +500,19 @@ def processDir(dir):
 
 		thisSeries, seriesId  = getSeries(comicBookInfo, dir, filename)
 
+		if thisSeries == 0 or thisSeries == '':
+			print 'No Series Found'
+			if logLevel >= 1:
+				logFile = open(logFileName, 'a')
+				logFile.write(dir + '/' + filename + '\n')
+				logFile.close()
+			break
+
 		thisIssue = getIssueNumber(comicBookInfo, dir, filename)
 		issueResults = searchForIssue(thisSeries, thisIssue, seriesId)
 		if len(issueResults) == 0 :
 			'Unable to find that issue.'
+			
 			break
 		if len(issueResults) == 1 :
 			for id in issueResults:
@@ -511,11 +524,11 @@ def processDir(dir):
 		#issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
 		if issueId == 0:
 			print 'Unable to find the issue id.  Sorry'
-			if interactiveMode != True:
+			if logLevel >= 1:
 				logFile = open(logFileName, 'a')
 				logFile.write(dir + '/' + filename + '\n')
 				logFile.close()
-			#break
+			break
 		else: 
 			cvIssueResults = getIssueData(issueId)
 			resultCount = cvIssueResults['number_of_total_results']
@@ -548,7 +561,6 @@ def processDir(dir):
 			# personal perference to make volume the year the volume started
 			if cvVolumeResults['results']['start_year'] != 'none':
 				comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
-
 
 			if purgeExistingCredits == True:
 				credits = []
