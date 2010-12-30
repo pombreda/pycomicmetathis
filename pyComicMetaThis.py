@@ -68,7 +68,7 @@ includeDescriptionAsComment = True
 # interactiveMode will prompt the user for series and issue info 
 # if it can't be determined automatically.  If interactiveMode
 # is turned off, the file will be skipped
-interactiveMode = False
+interactiveMode = True
 
 # if interactiveMode is disabled, any issues that can't be
 # identified automatically will be logged to this file.
@@ -113,7 +113,7 @@ zipCommand = "zip"
 useSeriesCacheFile = True
 
 # amount of logging desired.  0 is none.  1 logs the filenames that
-# can't be processed.
+# can't be processed. 2 logs an error message along with the filename
 logLevel = 1
 
 baseURL="http://api.comicvine.com/"
@@ -321,8 +321,6 @@ def getSeries(comicBookInfo, directory, filename):
 	try: thisSeries = comicBookInfo['ComicBookInfo/1.0']['series']
 	except: thisSeries = ''
 
-	print 'thisSeries:\t%s' % thisSeries		
-
 	thisSeriesId = 0
 	readSeriesId = thisSeriesId
 	if useSeriesCacheFile == True:
@@ -351,6 +349,8 @@ def getSeries(comicBookInfo, directory, filename):
 		seriesResults = searchForSeries(thisSeries)
 		if len(seriesResults) == 0:
 			'No series with that name found.'
+			thisSeriesId = 0
+
 		if len(seriesResults) == 1:
 			'Found the series'
 			for id in seriesResults:
@@ -360,7 +360,7 @@ def getSeries(comicBookInfo, directory, filename):
 			thisSeriesId = raw_input('Enter the Series ID from the list above:\t')
 		
 	# if we've got a new series Id, we should update the cacheFile
-	if thisSeriesId != readSeriesId and useSeriesCacheFile == True:
+	if thisSeriesId != readSeriesId and thisSeriesId != 0 and useSeriesCacheFile == True:
 		print 'caching the series id...'
 		with open(os.path.join(directory, 'seriesId.txt'), 'w') as cacheFile:
 			cacheFile.write(str(thisSeriesId))
@@ -500,12 +500,36 @@ def processDir(dir):
 
 		thisSeries, seriesId  = getSeries(comicBookInfo, dir, filename)
 
-		if thisSeries == 0 or thisSeries == '':
-			print 'No Series Found'
+		print 'a'
+		print seriesId
+		print 'b'
+
+		if seriesId == 0 or seriesId == '':
+			print 'No Series Id Found'
+			if logLevel >= 2:
+				logFile = open(logFileName, 'a')
+				logFile.write('No Series Id Found: ' + dir + '/' + filename + '\n')
+				logFile.close()
+				break
 			if logLevel >= 1:
 				logFile = open(logFileName, 'a')
 				logFile.write(dir + '/' + filename + '\n')
 				logFile.close()
+				break
+			break
+
+		if thisSeries == 0 or thisSeries == '':
+			print 'No Series Found'
+			if logLevel >= 2:
+				logFile = open(logFileName, 'a')
+				logFile.write('No Series Found: ' + dir + '/' + filename + '\n')
+				logFile.close()
+				break
+			if logLevel >= 1:
+				logFile = open(logFileName, 'a')
+				logFile.write(dir + '/' + filename + '\n')
+				logFile.close()
+				break
 			break
 
 		thisIssue = getIssueNumber(comicBookInfo, dir, filename)
@@ -524,10 +548,16 @@ def processDir(dir):
 		#issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
 		if issueId == 0:
 			print 'Unable to find the issue id.  Sorry'
+			if logLevel >= 2:
+				logFile = open(logFileName, 'a')
+				logFile.write('No Issue Id Found: ' + dir + '/' + filename + '\n')
+				logFile.close()
+				break
 			if logLevel >= 1:
 				logFile = open(logFileName, 'a')
 				logFile.write(dir + '/' + filename + '\n')
 				logFile.close()
+				break
 			break
 		else: 
 			cvIssueResults = getIssueData(issueId)
