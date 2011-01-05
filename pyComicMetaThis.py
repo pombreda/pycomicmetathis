@@ -31,6 +31,7 @@
       -v..., --volume...	set/get comic book volume
       -d..., --date...	set/get comic book date [format MM-YYYY]
       -c, --credits		get comic book credits
+      -z, --zerocache           override use of serisID.txt cache file.
 """
 __program__ = 'pyComicMetaThis.py'
 __version__ = '0.2e'
@@ -489,147 +490,151 @@ def writeComicBookInfo(comicBookInfo, dir, filename):
 	#delete the JSON file
 	os.remove(jsonFile)
 
+def processFile(dir, filename):
+
+	print 'Processing :' + filename
+		
+	comicBookInfo = readCBI(dir, filename)
+
+	thisSeries, seriesId  = getSeries(comicBookInfo, dir, filename)
+
+	print 'a'
+	print seriesId
+	print 'b'
+
+	if seriesId == 0 or seriesId == '':
+		print 'No Series Id Found'
+		if logLevel >= 2:
+			logFile = open(logFileName, 'a')
+			logFile.write('No Series Id Found: ' + dir + '/' + filename + '\n')
+			logFile.close()
+			return
+		if logLevel >= 1:
+			logFile = open(logFileName, 'a')
+			logFile.write(dir + '/' + filename + '\n')
+			logFile.close()
+			return
+		return
+
+	if thisSeries == 0 or thisSeries == '':
+		print 'No Series Found'
+		if logLevel >= 2:
+			logFile = open(logFileName, 'a')
+			logFile.write('No Series Found: ' + dir + '/' + filename + '\n')
+			logFile.close()
+			return
+		if logLevel >= 1:
+			logFile = open(logFileName, 'a')
+			logFile.write(dir + '/' + filename + '\n')
+			logFile.close()
+			return
+		return
+
+	thisIssue = getIssueNumber(comicBookInfo, dir, filename)
+	issueResults = searchForIssue(thisSeries, thisIssue, seriesId)
+	if len(issueResults) == 0 :
+		'Unable to find that issue.'
+		return
+	if len(issueResults) == 1 :
+		for id in issueResults:
+			issueId = id
+	if len(issueResults) > 1:
+		displayIssueInfo(issueResults)
+		issueId = raw_input('Enter the Issue ID from the list above: ')
+
+	#issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
+	if issueId == 0:
+		print 'Unable to find the issue id.  Sorry'
+		if logLevel >= 2:
+			logFile = open(logFileName, 'a')
+			logFile.write('No Issue Id Found: ' + dir + '/' + filename + '\n')
+			logFile.close()
+			return
+		if logLevel >= 1:
+			logFile = open(logFileName, 'a')
+			logFile.write(dir + '/' + filename + '\n')
+			logFile.close()
+			return
+		return
+
+	else: 
+		cvIssueResults = getIssueData(issueId)
+		resultCount = cvIssueResults['number_of_total_results']
+
+		cvVolumeURL = cvIssueResults['results']['volume']['api_detail_url'] + '?api_key=' + APIKEY + '&format=json'
+		cvVolumeResults = json.load(urllib.urlopen(cvVolumeURL))
+
+		# update our JSON object with the CV data
+		comicBookInfo['ComicBookInfo/1.0']['series'] = thisSeries
+		comicBookInfo['ComicBookInfo/1.0']['issue'] = thisIssue
+		comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['name']
+		#print cvVolumeResults
+
+		try:
+			comicBookInfo['ComicBookInfo/1.0']['publisher'] = cvVolumeResults['results']['publisher']['name']
+		except:
+			print 'No Publisher in metadata'
+		if cvIssueResults['results']['publish_month'] == None:
+			print 'No Publication Month found'
+			comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = 1
+		else:
+			comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
+		comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
+		if includeDescriptionAsComment == True:
+			issueDescription = remove_html_tags(cvIssueResults['results']['description'])
+			issueDescription = issueDescription[:maxDescriptionLength]
+			if len(issueDescription) > 0:
+				comicBookInfo['ComicBookInfo/1.0']['comments'] = issueDescription
+
+		# personal perference to make volume the year the volume started
+		if cvVolumeResults['results']['start_year'] != 'none':
+			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
+
+		if purgeExistingCredits == True:
+			credits = []
+		else:
+			credits = comicBookInfo['ComicBookInfo/1.0']['credits']
+
+		if updateCredits == True:
+			comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(credits, cvIssueResults)
+			
+		if purgeExistingTags == True:
+			tags = []
+		else:
+			tags = comicBookInfo['ComicBookInfo/1.0']['tags']
+
+		if updateTags == True:
+
+			if includeStoryArcAsTags == True:
+				# add story arcs to the tags
+				for k in cvIssueResults['results']['story_arc_credits']:
+					tag = {}
+					tags.append(k['name'])
+
+			if includeCharactersAsTags == True:			
+				# add characters to the tags
+				for k in cvIssueResults['results']['character_credits']:
+					tag = {}
+					tags.append(k['name'])
+
+			if includeItemsAsTags == True:
+				# add items to the tags
+				for k in cvIssueResults['results']['object_credits']:
+					tag = {}
+					tags.append(k['name'])
+
+			comicBookInfo['ComicBookInfo/1.0']['tags'] = tags
+
+		writeComicBookInfo(comicBookInfo, dir, filename)
+
+	print 'Done with ' + filename
+
 def processDir(dir):
 
 	(fileList, dirList) = getfiles(dir)
 
 	for filename in fileList:
-		print 'Processing :' + filename
-		
-		comicBookInfo = readCBI(dir, filename)
-
-		thisSeries, seriesId  = getSeries(comicBookInfo, dir, filename)
-
-		print 'a'
-		print seriesId
-		print 'b'
-
-		if seriesId == 0 or seriesId == '':
-			print 'No Series Id Found'
-			if logLevel >= 2:
-				logFile = open(logFileName, 'a')
-				logFile.write('No Series Id Found: ' + dir + '/' + filename + '\n')
-				logFile.close()
-				break
-			if logLevel >= 1:
-				logFile = open(logFileName, 'a')
-				logFile.write(dir + '/' + filename + '\n')
-				logFile.close()
-				break
-			break
-
-		if thisSeries == 0 or thisSeries == '':
-			print 'No Series Found'
-			if logLevel >= 2:
-				logFile = open(logFileName, 'a')
-				logFile.write('No Series Found: ' + dir + '/' + filename + '\n')
-				logFile.close()
-				break
-			if logLevel >= 1:
-				logFile = open(logFileName, 'a')
-				logFile.write(dir + '/' + filename + '\n')
-				logFile.close()
-				break
-			break
-
-		thisIssue = getIssueNumber(comicBookInfo, dir, filename)
-		issueResults = searchForIssue(thisSeries, thisIssue, seriesId)
-		if len(issueResults) == 0 :
-			'Unable to find that issue.'
-			
-			break
-		if len(issueResults) == 1 :
-			for id in issueResults:
-				issueId = id
-		if len(issueResults) > 1:
-			displayIssueInfo(issueResults)
-			issueId = raw_input('Enter the Issue ID from the list above: ')
-
-		#issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
-		if issueId == 0:
-			print 'Unable to find the issue id.  Sorry'
-			if logLevel >= 2:
-				logFile = open(logFileName, 'a')
-				logFile.write('No Issue Id Found: ' + dir + '/' + filename + '\n')
-				logFile.close()
-				break
-			if logLevel >= 1:
-				logFile = open(logFileName, 'a')
-				logFile.write(dir + '/' + filename + '\n')
-				logFile.close()
-				break
-			break
-		else: 
-			cvIssueResults = getIssueData(issueId)
-			resultCount = cvIssueResults['number_of_total_results']
-
-			cvVolumeURL = cvIssueResults['results']['volume']['api_detail_url'] + '?api_key=' + APIKEY + '&format=json'
-			cvVolumeResults = json.load(urllib.urlopen(cvVolumeURL))
-
-			# update our JSON object with the CV data
-			comicBookInfo['ComicBookInfo/1.0']['series'] = thisSeries
-			comicBookInfo['ComicBookInfo/1.0']['issue'] = thisIssue
-			comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['name']
-			#print cvVolumeResults
-
-			try:
-				comicBookInfo['ComicBookInfo/1.0']['publisher'] = cvVolumeResults['results']['publisher']['name']
-			except:
-				print 'No Publisher in metadata'
-			if cvIssueResults['results']['publish_month'] == None:
-				print 'No Publication Month found'
-				comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = 1
-			else:
-				comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
-			comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
-			if includeDescriptionAsComment == True:
-				issueDescription = remove_html_tags(cvIssueResults['results']['description'])
-				issueDescription = issueDescription[:maxDescriptionLength]
-				if len(issueDescription) > 0:
-					comicBookInfo['ComicBookInfo/1.0']['comments'] = issueDescription
-
-			# personal perference to make volume the year the volume started
-			if cvVolumeResults['results']['start_year'] != 'none':
-				comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
-
-			if purgeExistingCredits == True:
-				credits = []
-			else:
-				credits = comicBookInfo['ComicBookInfo/1.0']['credits']
-
-			if updateCredits == True:
-				comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(credits, cvIssueResults)
-			
-			if purgeExistingTags == True:
-				tags = []
-			else:
-				tags = comicBookInfo['ComicBookInfo/1.0']['tags']
-
-			if updateTags == True:
-
-				if includeStoryArcAsTags == True:
-					# add story arcs to the tags
-					for k in cvIssueResults['results']['story_arc_credits']:
-						tag = {}
-						tags.append(k['name'])
-
-				if includeCharactersAsTags == True:			
-					# add characters to the tags
-					for k in cvIssueResults['results']['character_credits']:
-						tag = {}
-						tags.append(k['name'])
-
-				if includeItemsAsTags == True:
-					# add items to the tags
-					for k in cvIssueResults['results']['object_credits']:
-						tag = {}
-						tags.append(k['name'])
-
-				comicBookInfo['ComicBookInfo/1.0']['tags'] = tags
-
-			writeComicBookInfo(comicBookInfo, dir, filename)
-
-			print 'Done with ' + filename
+		processFile(dir, filename)
 	for subdir in dirList:
 		processDir(os.path.join(dir, subdir))
 
@@ -640,6 +645,7 @@ def makehash():
 
 def main():
 	usage() 
+	global useSeriesCacheFile
 	if len(sys.argv) == 1 or sys.argv[1] == 'autoset' :  
 		dir = os.getcwd()
 		processDir(dir)
@@ -652,7 +658,7 @@ def main():
 			action=""
 		try:
 			if action == "set":
-				opts, args = getopt.getopt(argv,"hf:p:t:s:i:v:d:",["help","version","file=","publisher=","title=","series=", "issue=", "volume=", "date="])
+				opts, args = getopt.getopt(argv,"zhf:p:t:s:i:v:d:",["zerocache","help","version","file=","publisher=","title=","series=", "issue=", "volume=", "date="])
 			else:
 				opts, args = getopt.getopt(argv,"hf:ptsivdc",["help","version","file=","publisher","title","series", "issue", "volume", "date","credits"])
 
@@ -686,6 +692,8 @@ def main():
 			if opt in ("-h","--help"):
 				usage()
 				sys.exit()
+			elif opt in ("-z", "--zerocache"):
+				useSeriesCacheFile = False
 			elif opt == "--version":
 				print sys.argv[0] + " " + __version__
 				sys.exit()
@@ -776,7 +784,9 @@ def main():
 					print "Custom tags are not yet implemented"
 
 		elif action == "set":
-			print "Setting CBI"
+			print "Setting CBI for " + file
+			dir = os.getcwd()
+			processFile(dir, file)
 
 		#	for tag in tags:
 		#		print tag + ": " + tags[tag]
