@@ -34,9 +34,9 @@
       -z, --zerocache           override use of seriesID.txt cache file.
 """
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.2f'
+__version__ = '0.2g'
 __author__ = "Andre (andre.messier@gmail.com)"
-__date__ = "2011-01-05"
+__date__ = "2011-01-06"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
 __license__ = "GPL"
 
@@ -138,7 +138,6 @@ def blankCBI():
 	emptyCBIContainer['ComicBookInfo/1.0'] = emptyCBI
 	emptyCBIContainer['appID'] = __program__ + '/' + __version__
 	emptyCBIContainer['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
-
 	return emptyCBIContainer
 
 def remove_html_tags(data):
@@ -414,8 +413,6 @@ def getIssueNumber(comicBookInfo, directory, filename):
 
 	if thisIssue == '' and interactiveMode == True:
 		thisIssue = raw_input('No issue number found.  Enter the issue number:\t')
-	# TODO if there is a single number in the filename, assume that is the issue number
-	
 	return thisIssue
 
 def getCredits(credits, cvIssueResults):
@@ -515,8 +512,8 @@ def writeComicBookInfo(comicBookInfo, dir, filename):
 	with open(jsonFile , mode='w') as f:
 		json.dump(comicBookInfo,f,indent=0)
 
-	myvar = json.dumps(comicBookInfo,indent=0)
-	print len(myvar)
+	#myvar = json.dumps(comicBookInfo,indent=0)
+	#print len(myvar)
 	#pauseHere = raw_input('Press Enter')
 
 	print 'Writing back updated ComicBookInfo for ' + filename
@@ -640,8 +637,12 @@ def processFile(dir, filename):
 				comicBookInfo['ComicBookInfo/1.0']['comments'] = issueDescription
 
 		# personal perference to make volume the year the volume started
-		if cvVolumeResults['results']['start_year'] != 'none':
+
+
+		if cvVolumeResults['results']['start_year'] != None :
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
+		else:
+			comicBookInfo['ComicBookInfo/1.0']['volume'] = ''
 
 		if purgeExistingCredits == True:
 			credits = []
