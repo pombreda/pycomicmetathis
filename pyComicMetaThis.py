@@ -407,9 +407,15 @@ def getSeries(comicBookInfo, directory, filename):
 def getIssueNumber(comicBookInfo, directory, filename):
 	try:thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
 	except: thisIssue = ''
+	issnum = re.search('(?<=[_#\s-])(\d+[a-zA-Z]|\d+\.\d|\d+)', filename)
+	if issnum:
+		thisIssue = issnum.group()
+		print 'Got the issue from filename. Issue is ' + thisIssue + '.'
+
 	if thisIssue == '' and interactiveMode == True:
 		thisIssue = raw_input('No issue number found.  Enter the issue number:\t')
 	# TODO if there is a single number in the filename, assume that is the issue number
+	
 	return thisIssue
 
 def getCredits(credits, cvIssueResults):
@@ -509,6 +515,8 @@ def writeComicBookInfo(comicBookInfo, dir, filename):
 	with open(jsonFile , mode='w') as f:
 		json.dump(comicBookInfo,f,indent=0)
 
+	myvar = json.dumps(comicBookInfo,indent=0)
+	print len(myvar)
 	#pauseHere = raw_input('Press Enter')
 
 	print 'Writing back updated ComicBookInfo for ' + filename
@@ -539,6 +547,8 @@ def processFile(dir, filename):
 	# try to lookup the issue based on the filename
 	# this will only return non-zero values if only one match is found
 	issueId, seriesId, thisSeries, thisIssue = searchByFileName(filename)
+
+	
 
 	if seriesId == 0 or seriesId == '':
 		thisSeries, seriesId  = getSeries(comicBookInfo, dir, filename)
