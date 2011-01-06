@@ -413,6 +413,11 @@ def getIssueNumber(comicBookInfo, directory, filename):
 
 	if thisIssue == '' and interactiveMode == True:
 		thisIssue = raw_input('No issue number found.  Enter the issue number:\t')
+	# strip leading zeroes from issue number
+	thisIssue = thisIssue.lstrip("0")
+	if len(thisIssue) == 0:
+		thisIssue = "0"
+	print thisIssue
 	return thisIssue
 
 def getCredits(credits, cvIssueResults):
