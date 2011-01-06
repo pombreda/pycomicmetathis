@@ -134,6 +134,7 @@ def blankCBI():
 	emptyCBI = {}
 	emptyCBI['series'] = ''
 	emptyCBI['issue'] = ''
+	emptyCBI['volume'] = ''
 	emptyCBIContainer['ComicBookInfo/1.0'] = emptyCBI
 	emptyCBIContainer['appID'] = __program__ + '/' + __version__
 	emptyCBIContainer['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
