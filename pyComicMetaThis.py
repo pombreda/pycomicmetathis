@@ -31,12 +31,12 @@
       -v..., --volume...	set/get comic book volume
       -d..., --date...	set/get comic book date [format MM-YYYY]
       -c, --credits		get comic book credits
-      -z, --zerocache           override use of serisID.txt cache file.
+      -z, --zerocache           override use of seriesID.txt cache file.
 """
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.2e'
-__author__ = "Andre (andre.messier@gmail.com); Sasha (sasha@goldnet.ca)"
-__date__ = "2010-12-23"
+__version__ = '0.2f'
+__author__ = "Andre (andre.messier@gmail.com)"
+__date__ = "2011-01-05"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
 __license__ = "GPL"
 
@@ -209,6 +209,41 @@ def readComment(dir, filename):
 	cbzComment = cbzComment.replace('\r\n','')
 	#print cbzComment
 	return cbzComment	
+
+def fixSpaces(title):
+	placeholders = ['[-._]','  +']
+	for ph in placeholders:
+		title = re.sub(ph, ' ', title)
+	print "After fixing spaces, title is: " + title
+	return title
+
+def searchByFileName(filename):
+	issueId = 0
+	seriesId = 0
+	seriesName = ''
+	issueNumber = 0
+	# remove the extension
+	filename = os.path.splitext(filename)[0]
+	# replace any name seperators with spaces
+	filename = fixSpaces(filename)
+	issueList = {}
+	cvBaseSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(filename) + '&resources=issue' 
+	#TODO: after this is working, limit the results to the fields we use
+	#cvBaseSearchURL = cvBaseSearchURL + '&field_list=name,start_year,id,description,issue_number'
+	cvBaseSearchURL = cvBaseSearchURL + '&format=json'
+	offset = 0
+	cvSearchURL = cvBaseSearchURL
+	print 'Please wait while I query ComicVine for the Issue based on the filename'
+	cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
+	resultCount = cvSearchResults['number_of_page_results']
+	if resultCount == 1:
+		seriesId = cvSearchResults['results'][0]['volume']['id']
+		seriesName = cvSearchResults['results'][0]['volume']['name']
+		issueId = cvSearchResults['results'][0]['id']
+		issueNumberD = decimal.Decimal(str(cvSearchResults['results'][0]['id'] ))
+		issueNumberI = int(issueNumberD)
+		issueNumber = str(issueNumberI).rstrip()
+	return issueId, seriesId, seriesName,issueNumber
 
 def searchForIssue(seriesName, issueNumber, seriesId):
 	issueList = {}
@@ -493,14 +528,19 @@ def writeComicBookInfo(comicBookInfo, dir, filename):
 def processFile(dir, filename):
 
 	print 'Processing :' + filename
-		
+
+	thisSeries = ''		
+	seriesId = 0
 	comicBookInfo = readCBI(dir, filename)
 
-	thisSeries, seriesId  = getSeries(comicBookInfo, dir, filename)
+	#TODO:  Add a check that will lookup the issue/series based on the pre-existing
+	#	metadata if it exists before trying the filename
+	# try to lookup the issue based on the filename
+	# this will only return non-zero values if only one match is found
+	issueId, seriesId, thisSeries, thisIssue = searchByFileName(filename)
 
-	print 'a'
-	print seriesId
-	print 'b'
+	if seriesId == 0 or seriesId == '':
+		thisSeries, seriesId  = getSeries(comicBookInfo, dir, filename)
 
 	if seriesId == 0 or seriesId == '':
 		print 'No Series Id Found'
@@ -530,17 +570,19 @@ def processFile(dir, filename):
 			return
 		return
 
-	thisIssue = getIssueNumber(comicBookInfo, dir, filename)
-	issueResults = searchForIssue(thisSeries, thisIssue, seriesId)
-	if len(issueResults) == 0 :
-		'Unable to find that issue.'
-		return
-	if len(issueResults) == 1 :
-		for id in issueResults:
-			issueId = id
-	if len(issueResults) > 1:
-		displayIssueInfo(issueResults)
-		issueId = raw_input('Enter the Issue ID from the list above: ')
+	# if we don't know the issue number, try to look it up
+	if issueId == 0:
+		thisIssue = getIssueNumber(comicBookInfo, dir, filename)
+		issueResults = searchForIssue(thisSeries, thisIssue, seriesId)
+		if len(issueResults) == 0 :
+			'Unable to find that issue.'
+			return
+		if len(issueResults) == 1 :
+			for id in issueResults:
+				issueId = id
+		if len(issueResults) > 1:
+			displayIssueInfo(issueResults)
+			issueId = raw_input('Enter the Issue ID from the list above: ')
 
 	#issueId = getIssueId(thisSeries, thisIssue, cvSearchResults)
 	if issueId == 0:
