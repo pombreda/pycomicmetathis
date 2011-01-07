@@ -240,7 +240,7 @@ def searchByFileName(filename):
 		seriesId = cvSearchResults['results'][0]['volume']['id']
 		seriesName = cvSearchResults['results'][0]['volume']['name']
 		issueId = cvSearchResults['results'][0]['id']
-		issueNumberD = decimal.Decimal(str(cvSearchResults['results'][0]['id'] ))
+		issueNumberD = decimal.Decimal(str(cvSearchResults['results'][0]['issue_number'] ))
 		issueNumberI = int(issueNumberD)
 		issueNumber = str(issueNumberI).rstrip()
 	return issueId, seriesId, seriesName,issueNumber
@@ -517,8 +517,10 @@ def writeComicBookInfo(comicBookInfo, dir, filename):
 	with open(jsonFile , mode='w') as f:
 		json.dump(comicBookInfo,f,indent=0)
 
-	#myvar = json.dumps(comicBookInfo,indent=0)
-	#print len(myvar)
+	#TODO: if the JSON is too big, trim it
+	#TODO: if the JSON is zero length, log an error
+	jsonLength = len(json.dumps(comicBookInfo,indent=0))
+	#print jsonLength
 	#pauseHere = raw_input('Press Enter')
 
 	print 'Writing back updated ComicBookInfo for ' + filename
@@ -816,7 +818,8 @@ def main():
 			print "Getting CBI from " + file
 			cbzcomment = cbzfile.comment
 			try:
-				cbinfo = json.loads(cbzcomment)
+				cbinfo = readComment(os.getcwd(),file)
+				#cbinfo = json.loads(cbzcomment)
 			except:
 				print 'No CBI found in file'
 				sys.exit(2)
