@@ -103,8 +103,8 @@ showSearchProgress = False
 # zipCommand variable to the path to the new version
 # without this, ComicBookInfo records over 256 characters
 # will not work properly
-#zipCommand = "/bin/ziplong"
-zipCommand = "zip"
+zipCommand = "/bin/ziplong"
+#zipCommand = "zip"
 
 # as an optimization you can set the useSeriesCacheFile value
 # to true.  This will save the first seriesId found in 
