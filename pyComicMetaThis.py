@@ -538,6 +538,18 @@ def writeComicBookInfo(comicBookInfo, dir, filename):
 	#delete the JSON file
 	os.remove(jsonFile)
 
+
+def displayIssueInfo(matchingIssues):
+	for issue in matchingIssues:
+		print '##################################\n'
+		print 'Issue ID:\t%s' % matchingIssues[issue]['id']
+		print 'Issue Name:\t%s' % matchingIssues[issue]['name']
+		if displaySeriesDescriptionOnDupe == True:
+			issueDescription = remove_html_tags(matchingIssues[issue]['description'])
+			print 'Issue Description:\t%s\n' % issueDescription
+
+
+
 def processFile(dir, filename):
 
 	print 'Processing :' + filename
