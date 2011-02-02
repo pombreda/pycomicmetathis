@@ -634,7 +634,7 @@ def processFile(dir, filename):
 		cvVolumeResults = json.load(urllib.urlopen(cvVolumeURL))
 
 		# update our JSON object with the CV data
-		comicBookInfo['ComicBookInfo/1.0']['series'] = thisSeries
+		comicBookInfo['ComicBookInfo/1.0']['series'] = cvIssueResults['results']['volume']['name']
 		comicBookInfo['ComicBookInfo/1.0']['issue'] = thisIssue
 		comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['name']
 		#print cvVolumeResults
