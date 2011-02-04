@@ -233,7 +233,7 @@ def searchByFileName(filename):
 	cvBaseSearchURL = cvBaseSearchURL + '&format=json'
 	offset = 0
 	cvSearchURL = cvBaseSearchURL
-	print 'Please wait while I query ComicVine for the Issue based on the filename'
+	print 'Querying the ComicVine for the Issue based on the filename...'
 	cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
 	resultCount = cvSearchResults['number_of_page_results']
 	if resultCount == 1:
@@ -254,7 +254,7 @@ def searchForIssue(seriesName, issueNumber, seriesId):
 	offset = 0
 	resultCount = 20
 	cvSearchURL = cvBaseSearchURL
-	print 'Please wait while I query ComicVine for the Issue'
+	print 'Querying ComicVine for the Issue...'
 	i = 0
 	while resultCount >= 20:
 		cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
@@ -286,7 +286,7 @@ def searchForSeries(seriesName, offset=0):
 	offset = 0
 	resultCount = 20
 	cvSearchURL = cvBaseSearchURL 
-	print 'Please wait while I query ComicVine for the Series'
+	print 'Querying ComicVine for the Series...'
 	i = 0
 	while resultCount >= 20:
 		cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
@@ -550,12 +550,13 @@ def displayIssueInfo(matchingIssues):
 
 
 
-def processFile(dir, filename):
+def processFile(dir, filename, thisSeriesId):
 
 	print 'Processing :' + filename
 
 	thisSeries = ''		
-	seriesId = 0
+	seriesId = thisSeriesId
+	#seriesId = 0
 	comicBookInfo = readCBI(dir, filename)
 
 	#TODO:  Add a check that will lookup the issue/series based on the pre-existing
@@ -705,9 +706,24 @@ def processFile(dir, filename):
 def processDir(dir):
 
 	(fileList, dirList) = getfiles(dir)
+	# initialize the seriesId number
+	thisSeriesId = 0
+
+	# if this folder has a cached seriesId and we've turned on the option to use it
+	# read the series Id and we'll pass that along.
+	if useSeriesCacheFile == True:
+		if os.path.exists(os.path.join(dir, 'seriesId.txt')) == True:
+			print 'Found a seriesId.txt file in this directory.'
+			with open(os.path.join(dir, 'seriesId.txt'), 'r') as cacheFile:
+				readSeriesId = cacheFile.readline()
+			if readSeriesId == '':	
+				readSeriesId = 0
+			else:
+				print 'Read series Id is %s' % readSeriesId		
+			thisSeriesId = readSeriesId
 
 	for filename in fileList:
-		processFile(dir, filename)
+		processFile(dir, filename, thisSeriesId)
 	for subdir in dirList:
 		processDir(os.path.join(dir, subdir))
 
