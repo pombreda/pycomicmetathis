@@ -700,6 +700,10 @@ def processFile(dir, filename, thisSeriesId):
 			comicBookInfo['ComicBookInfo/1.0']['tags'] = tags
 
 		writeComicBookInfo(comicBookInfo, dir, filename)
+		# Clean up JSON file if it's still there.  
+		# For some reason it's not always deleted properly
+		jsonFile = os.path.join(dir, filename) + '.json'
+		if os.path.exists(jsonFile) == True:
 
 	print 'Done with ' + filename
 
