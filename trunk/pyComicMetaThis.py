@@ -708,8 +708,8 @@ def processFile(dir, filename, thisSeriesId):
 		writeComicBookInfo(comicBookInfo, dir, filename)
 		# Clean up JSON file if it's still there.  
 		# For some reason it's not always deleted properly
-		jsonFile = os.path.join(dir, filename) + '.json'
-		if os.path.exists(jsonFile) == True:
+		#jsonFile = os.path.join(dir, filename) + '.json'
+		#if os.path.exists(jsonFile) == True:
 
 	print 'Done with ' + filename
 
