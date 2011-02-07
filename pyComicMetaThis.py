@@ -113,6 +113,12 @@ zipCommand = "/bin/ziplong"
 # same series
 useSeriesCacheFile = True
 
+# if you want the first year the series was published
+# to be used as the "volume" set useStartYearAsVolume to 
+# True.  Otherwise set it to False.  Currently setting 
+# it to False means Volume will be left blank
+useStartYearAsVolume = True
+
 # amount of logging desired.  0 is none.  1 logs the filenames that
 # can't be processed. 2 logs an error message along with the filename
 logLevel = 1
@@ -659,7 +665,7 @@ def processFile(dir, filename, thisSeriesId):
 		# personal perference to make volume the year the volume started
 
 
-		if cvVolumeResults['results']['start_year'] != None :
+		if useStartYearAsVolume == True and cvVolumeResults['results']['start_year'] != None :
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
 		else:
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = ''
