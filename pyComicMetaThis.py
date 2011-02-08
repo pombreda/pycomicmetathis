@@ -148,7 +148,6 @@ def blankCBI():
 	emptyCBI = {}
 	emptyCBI['series'] = ''
 	emptyCBI['issue'] = ''
-	emptyCBI['volume'] = ''
 	emptyCBIContainer['ComicBookInfo/1.0'] = emptyCBI
 	emptyCBIContainer['appID'] = __program__ + '/' + __version__
 	emptyCBIContainer['lastModified'] = time.strftime("%Y-%m-%d %H:%M%S +0000", time.gmtime())
@@ -706,7 +705,8 @@ def processFile(dir, filename, thisSeriesId):
 		if useStartYearAsVolume == True and cvVolumeResults['results']['start_year'] != None :
 			comicBookInfo['ComicBookInfo/1.0']['volume'] = cvVolumeResults['results']['start_year']
 		else:
-			comicBookInfo['ComicBookInfo/1.0']['volume'] = ''
+			try: del comicBookInfo['ComicBookInfo/1.0']['volume']
+			except: pass
 
 		if purgeExistingCredits == True:
 			credits = []
