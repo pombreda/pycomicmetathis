@@ -670,10 +670,10 @@ def processFile(dir, filename, thisSeriesId):
 		# update our JSON object with the CV data
 		comicBookInfo['ComicBookInfo/1.0']['series'] = cvIssueResults['results']['volume']['name']
 		comicBookInfo['ComicBookInfo/1.0']['issue'] = thisIssue
-		if useSeriesWhenNoTitle == True and cvIssueResults['results']['name'] == '':
+		if useSeriesWhenNoTitle == True and str.rstrip(cvIssueResults['results']['name']) == '':
 			while len(thisIssue) < padIssueNumber:
 				thisIssue = '0' + thisIssue
-			comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['volume']['name'] + ' ' + thisIssue
+			comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['volume']['name'] + " " + thisIssue
 		else:
 			comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['name']
 		#print cvVolumeResults
