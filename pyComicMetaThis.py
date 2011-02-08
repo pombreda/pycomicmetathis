@@ -34,9 +34,9 @@
       -z, --zerocache           override use of seriesID.txt cache file.
 """
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.2g'
+__version__ = '0.2i'
 __author__ = "Andre (andre.messier@gmail.com)"
-__date__ = "2011-01-06"
+__date__ = "2011-02-07"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
 __license__ = "GPL"
 
@@ -231,6 +231,19 @@ def fixSpaces(title):
 	print "After fixing spaces, title is: " + title
 	return title
 
+def parseIssueNumberFromName(filename):
+	issueNumber = ''
+	# remove the extension
+	filename = os.path.splitext(filename)[0]
+	# replace any name seperators with spaces
+	filename = fixSpaces(filename)
+	fileWords = filename.split(' ')
+	# assume the last number in the filename that is under 4 digits is the issue number
+	for word in reversed(fileWords):
+		if issueNumber == 0 and word.isdigit() == True and len(word) < 4:
+			issueNumber = word
+	return issueNumber
+
 def searchByFileName(filename):
 	issueId = 0
 	seriesId = 0
@@ -420,10 +433,18 @@ def getSeries(comicBookInfo, directory, filename):
 def getIssueNumber(comicBookInfo, directory, filename):
 	try:thisIssue = comicBookInfo['ComicBookInfo/1.0']['issue']
 	except: thisIssue = ''
-	issnum = re.search('(?<=[_#\s-])(\d+[a-zA-Z]|\d+\.\d|\d+)', filename)
-	if issnum:
-		thisIssue = issnum.group()
-		print 'Got the issue from filename. Issue is ' + thisIssue + '.'
+	
+	if thisIssue == '':
+		# try the parsing function
+		thisIssue = parseIssueNumberFromName(filename)
+		print 'Assuming issue number is ' + thisIssue + ' based on the filename.'
+		print 'A'
+	if thisIssue == '':
+		# try a regex
+		issnum = re.search('(?<=[_#\s-])(\d+[a-zA-Z]|\d+\.\d|\d+)', filename)
+		if issnum:
+			thisIssue = issnum.group()
+			print 'Got the issue from filename. Issue is ' + thisIssue + '.'
 
 	if thisIssue == '' and interactiveMode == True:
 		thisIssue = raw_input('No issue number found.  Enter the issue number:\t')
