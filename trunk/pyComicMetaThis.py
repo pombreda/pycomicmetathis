@@ -119,6 +119,14 @@ useSeriesCacheFile = True
 # it to False means Volume will be left blank
 useStartYearAsVolume = True
 
+# userSeriesWhenNoTitle: if the issue doesn't have a title, 
+# use the series name plus issue number as the title
+# padIssueNumber: how many characters you want the issue 
+# number to be in the title.  Zeroes will be used to pad
+# to this length 
+useSeriesWhenNoTitle = True
+padIssueNumber = 3
+
 # amount of logging desired.  0 is none.  1 logs the filenames that
 # can't be processed. 2 logs an error message along with the filename
 logLevel = 1
@@ -643,7 +651,12 @@ def processFile(dir, filename, thisSeriesId):
 		# update our JSON object with the CV data
 		comicBookInfo['ComicBookInfo/1.0']['series'] = cvIssueResults['results']['volume']['name']
 		comicBookInfo['ComicBookInfo/1.0']['issue'] = thisIssue
-		comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['name']
+		if useSeriesWhenNoTitle == True and cvIssueResults['results']['name'] == '':
+			while len(thisIssue) < padIssueNumber:
+				thisIssue = '0' + thisIssue
+			comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['volume']['name'] + ' ' + thisIssue
+		else:
+			comicBookInfo['ComicBookInfo/1.0']['title'] = cvIssueResults['results']['name']
 		#print cvVolumeResults
 
 		try:
@@ -708,8 +721,9 @@ def processFile(dir, filename, thisSeriesId):
 		writeComicBookInfo(comicBookInfo, dir, filename)
 		# Clean up JSON file if it's still there.  
 		# For some reason it's not always deleted properly
-		#jsonFile = os.path.join(dir, filename) + '.json'
-		#if os.path.exists(jsonFile) == True:
+		jsonFile = os.path.join(dir, filename) + '.json'
+		if os.path.exists(jsonFile) == True:
+			os.remove(jsonFile)
 
 	print 'Done with ' + filename
 
