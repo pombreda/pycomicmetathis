@@ -438,7 +438,6 @@ def getIssueNumber(comicBookInfo, directory, filename):
 		# try the parsing function
 		thisIssue = parseIssueNumberFromName(filename)
 		print 'Assuming issue number is ' + thisIssue + ' based on the filename.'
-		print 'A'
 	if thisIssue == '':
 		# try a regex
 		issnum = re.search('(?<=[_#\s-])(\d+[a-zA-Z]|\d+\.\d|\d+)', filename)
@@ -452,7 +451,6 @@ def getIssueNumber(comicBookInfo, directory, filename):
 	thisIssue = thisIssue.lstrip("0")
 	if len(thisIssue) == 0:
 		thisIssue = "0"
-	print thisIssue
 	return thisIssue
 
 def getCredits(credits, cvIssueResults):
@@ -684,12 +682,18 @@ def processFile(dir, filename, thisSeriesId):
 			comicBookInfo['ComicBookInfo/1.0']['publisher'] = cvVolumeResults['results']['publisher']['name']
 		except:
 			print 'No Publisher in metadata'
-		if cvIssueResults['results']['publish_month'] == None:
-			print 'No Publication Month found'
-			comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = 1
+
+		if cvIssueResults['results']['publish_year'] == None:
+			print 'No Publication Year found.  Skipping the year and month'
 		else:
-			comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
-		comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
+			if cvIssueResults['results']['publish_month'] == None:
+				print 'No Publication Month found.  Defaulting to January'
+				comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = 1
+			else:
+				comicBookInfo['ComicBookInfo/1.0']['publicationMonth']  = cvIssueResults['results']['publish_month']
+
+			comicBookInfo['ComicBookInfo/1.0']['publicationYear'] = cvIssueResults['results']['publish_year']
+
 		if includeDescriptionAsComment == True:
 			issueDescription = remove_html_tags(cvIssueResults['results']['description'])
 			issueDescription = issueDescription[:maxDescriptionLength]
