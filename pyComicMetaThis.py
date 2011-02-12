@@ -34,9 +34,9 @@
       -z, --zerocache           override use of seriesID.txt cache file.
 """
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.2i'
+__version__ = '0.2j'
 __author__ = "Andre (andre.messier@gmail.com)"
-__date__ = "2011-02-07"
+__date__ = "2011-02-12"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
 __license__ = "GPL"
 
@@ -89,7 +89,6 @@ assumeDirIsSeries = False
 # these flags determine if the Issue description and/or
 # series description are displayed
 displayIssueDescriptionOnDupe = True
-displaySeriesDescriptionOnDupe = True
 
 # how many characters of the issues/series description to show
 # if the includeDescriptionAsComment is true, this will also
@@ -126,6 +125,11 @@ useStartYearAsVolume = True
 # to this length 
 useSeriesWhenNoTitle = True
 padIssueNumber = 3
+
+#list of fields to display when more than one series is found
+# valid options are id, name, publisher, start_year, description, count_of_issues, aliases
+# id is REQUIRED
+seriesDisplayFields = ['name','publisher','start_year','description','count_of_issues','id','aliases']
 
 # amount of logging desired.  0 is none.  1 logs the filenames that
 # can't be processed. 2 logs an error message along with the filename
@@ -323,31 +327,30 @@ def searchForSeries(seriesName, offset=0):
 				print i
 			if series['resource_type'] == 'volume':
 				volume = {}
-				volume['id'] = series['id']
-				volume['name'] = series['name']
-				volume['start_year'] = series['start_year']
-				volume['description'] =  remove_html_tags(series['description'])
-				seriesList[series['id']] = volume					
+				for field in seriesDisplayFields:
+					# publisher is a dictionary so we need to pull the name value from that
+					if field == 'publisher' and series['publisher'] != None:
+						volume[field] = series[field]["name"]
+					# everything else is a string
+					else:
+						volume[field] = remove_html_tags(str(series[field]))
+				seriesList[series['id']] = volume
 		offset = offset + resultCount
 		cvSearchURL = cvBaseSearchURL + '&offset=' + str(offset)
+
 	return seriesList
 	
+def compareSeriesByYear (a, b):
+	return cmp(str(a['start_year']),str(b['start_year']))
 
 def displaySeriesInfo(seriesList):
-	sortedList = []
-	for key in seriesList:
-		sortedList.append((seriesList[key]['start_year'], seriesList[key]['id'], seriesList[key]['name'], seriesList[key]['description']))
-	import operator
-	index = operator.itemgetter(0)
-	sortedList.sort(key=index)
+	sortedList = sorted(seriesList.values(), compareSeriesByYear)
 
+	print '***************************************************'
 	for volume in sortedList:
-		print 'Series Id"\t%s' % volume[1]
-		print 'Name:\t%s' % volume[2]
-		if displaySeriesDescriptionOnDupe == True:
-			print 'Description:\t%s' % volume[3]
-		print 'First Published:\t%s' % volume[0]
-		print '****'
+		for field in seriesDisplayFields:
+			print '%s:\t%s' % (field, volume[field])
+		print '***************************************************'
 
 def getIssueData(issueId):
 	cvIssueURL = issueURL + '/' + str(issueId) + '/' +  '?api_key=' + APIKEY + '&format=json'
@@ -419,7 +422,7 @@ def getSeries(comicBookInfo, directory, filename):
 				thisSeriesId = id
 		if len(seriesResults) > 1:
 			displaySeriesInfo(seriesResults)
-			thisSeriesId = raw_input('Enter the Series ID from the list above:\t')
+			thisSeriesId = raw_input('Enter the Series ID fo %s from the list above:\t' % filename)
 		
 	# if we've got a new series Id, we should update the cacheFile
 	if thisSeriesId != readSeriesId and thisSeriesId != 0 and useSeriesCacheFile == True:
