@@ -89,6 +89,7 @@ assumeDirIsSeries = False
 # these flags determine if the Issue description and/or
 # series description are displayed
 displayIssueDescriptionOnDupe = True
+displaySeriesDescriptionOnDupe = True
 
 # how many characters of the issues/series description to show
 # if the includeDescriptionAsComment is true, this will also
