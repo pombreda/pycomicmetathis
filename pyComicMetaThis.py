@@ -334,7 +334,16 @@ def searchForSeries(seriesName, offset=0):
 						volume[field] = series[field]["name"]
 					# everything else is a string
 					else:
-						volume[field] = remove_html_tags(str(series[field]))
+						fieldType = type(series[field])
+						
+						if fieldType == type(int()):
+							volume[field] = series[field]
+						if fieldType == type(str()):
+							volume[field] = remove_html_tags(str(series[field]))
+						if fieldType == type(unicode()):
+							fieldAsString = series[field].encode('utf8','ignore')
+							print fieldAsString
+							volume[field] = remove_html_tags(fieldAsString)
 				seriesList[series['id']] = volume
 		offset = offset + resultCount
 		cvSearchURL = cvBaseSearchURL + '&offset=' + str(offset)
