@@ -49,9 +49,12 @@ import decimal
 import getopt
 import os.path
 import re
+import ConfigParser
 try: import simplejson as json
 except ImportError: import json
 
+
+configFile = './pyComicMetaThis.conf'
 
 APIKEY="e75dd8dd18cfdd80e1638de4262ed47ed890b96e"
 
@@ -147,6 +150,154 @@ def usage ():
 	print __program__ + " " +__version__+ " (" + __date__ + ")"
 	print __copyright__
 	print __doc__
+
+def readConfig():
+	if os.path.exists(configFile) == True:
+		print 'Config file found.  Reading options...'
+		config = ConfigParser.ConfigParser()
+		config.read(configFile)
+		baseURL = config.get('ComicVine','baseURL')
+		searchURL = config.get('ComicVine','searchURL')
+		issueURL = config.get('ComicVine','issueURL')
+		APIKEY = config.get('ComicVine', 'APIKEY')
+		logLevel = config.get('Preferences', 'logLevel')
+		try:
+			seriesDisplayFields = config.get('Preferences', 'seriesDisplayFields')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			padIssueNumber = config.get('Preferences', 'padIssueNumber')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			useSeriesWhenNoTitle = config.get('Preferences', 'useSeriesWhenNoTitle')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			useStartYearAsVolume = config.get('Preferences', 'useStartYearAsVolume')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			useSeriesCacheFile = config.get('Preferences', 'useSeriesCacheFile')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			zipCommand = config.get('Preferences', 'zipCommand')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			showSearchProgress = config.get('Preferences', 'showSearchProgress')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			searchSubFolders = config.get('Preferences', 'searchSubFolders')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			maxDescriptionLength = config.get('Preferences', 'maxDescriptionLength')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			displaySeriesDescriptionOnDupe = config.get('Preferences', 'displaySeriesDescriptionOnDupe')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			displayIssueDescriptionOnDupe = config.get('Preferences', 'displayIssueDescriptionOnDupe')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			assumeDirIsSeries = config.get('Preferences', 'assumeDirIsSeries')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			promptSeriesNameIfBlank = config.get('Preferences','promptSeriesNameIfBlank')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			logFileName = config.get('Preferences', 'logFileName')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			interactiveMode = config.get('Preferences', 'interactiveMode')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			includeDescriptionAsComment = config.get('Preferences', 'includeDescriptionAsComment')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			includeStoryArcAsTags = config.get('Preferences', 'includeStoryArcAsTags')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			includeItemsAsTags = config.get('Preferences', 'includeItemsAsTags')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			includeCharactersAsTags = config.get('Preferences','includeCharactersAsTags')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			purgeExistingCredits = config.get('Preferences','purgeExistingCredits')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			purgeExistingTags = config.get('Preferences', 'purgeExistingTags')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			updateCredits = config.get('Preferences','updateCredits')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
+			updateTags = config.get('Preferences', 'updateTags')
+		except ConfigParser.NoOptionError:
+			pass
+
+	#else:
+	#	createConfig()
+
+def createConfig():
+	if os.path.exists(configFile) == True:
+		print 'Config file already exists'
+	else:
+		print 'No config file found.  Creating one...'
+		config = ConfigParser.ConfigParser()
+		config.add_section('ComicVine')
+		config.set('ComicVine', 'issueURL', issueURL)
+		config.set('ComicVine', 'searchURL', searchURL)
+		config.set('ComicVine', 'baseURL', baseURL)
+		config.set('ComicVine', 'APIKEY', APIKEY)
+		config.add_section('Preferences')
+		config.set('Preferences', 'logLevel', logLevel)
+		config.set('Preferences', 'seriesDisplayFields', seriesDisplayFields)
+		config.set('Preferences', 'padIssueNumber', padIssueNumber)
+		config.set('Preferences', 'useSeriesWhenNoTitle', useSeriesWhenNoTitle)
+		config.set('Preferences', 'useStartYearAsVolume', useStartYearAsVolume)
+		config.set('Preferences', 'useSeriesCacheFile', useSeriesCacheFile)
+		config.set('Preferences', 'zipCommand', zipCommand)
+		config.set('Preferences', 'showSearchProgress', showSearchProgress)
+		config.set('Preferences', 'searchSubFolders', searchSubFolders)
+		config.set('Preferences', 'maxDescriptionLength', maxDescriptionLegnth)
+		config.set('Preferences', 'displaySeriesDescriptionOnDupe', displaySeriesDescriptionOnDupe)
+		config.set('Preferences', 'displayIssueDescriptionOnDupe', displayIssueDescriptionOnDupe)
+		config.set('Preferences', 'assumeDirIsSeries', assumeDirIsSeries)
+		config.set('Preferences', 'promptSeriesNameIfBlank', promptSeriesNameIfBlank)
+		config.set('Preferences', 'logFileName', logFileName)
+		config.set('Preferences', 'interactiveMode', interactiveMode)
+		config.set('Preferences', 'includeDescriptionAsComment', includeDescriptionAsComment)
+		config.set('Preferences', 'includeStoryArcAsTags', includeStoryArcAsTags)
+		config.set('Preferences', 'includeItemsAsTags', includeItemsAsTags)
+		config.set('Preferences', 'includeCharactersAsTags', includeCharactersAsTags)
+		config.set('Preferences', 'purgeExistingCredits', purgeExistingCredits)
+		config.set('Preferences', 'purgeExistingTags', purgeExistingTags)
+		config.set('Preferences', 'updateCredits', updateCredits)
+		config.set('Preferences', 'updateTags', updateTags)
+
+		with open(configFile, 'wb') as confFile:
+			config.write(confFile)
+		
+	readConfig()
 
 def blankCBI():
 	emptyCBIContainer = {}
@@ -796,6 +947,7 @@ def makehash():
 
 def main():
 	usage() 
+	readConfig()
 	global useSeriesCacheFile
 	if len(sys.argv) == 1 or sys.argv[1] == 'autoset' :  
 		dir = os.getcwd()
