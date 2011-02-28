@@ -83,6 +83,9 @@ logFileName = 'pyComicMetaThis.log'
 # ask the user to enter it.  Cannot be used if assumeDirIsSeries
 # is set to True 
 promptSeriesNameIfBlank = True
+# if the series name can't be determined AND promptSeriesNameIfBlank
+# is set to False, ask the user to enter the series ID
+promptSeriesIdIfBlank = False
 # if the series name is blank assume the directory is named after
 # the series.  Setting this to true will cause the 
 # promptSeriesNameIfBlank flag to be ignored.
@@ -214,6 +217,10 @@ def readConfig():
 		except ConfigParser.NoOptionError:
 			pass
 		try:
+			promptSeriesIdIfBlank = config.get('Preferences','promptSeriesIdIfBlank')
+		except ConfigParser.NoOptionError:
+			pass
+		try:
 			logFileName = config.get('Preferences', 'logFileName')
 		except ConfigParser.NoOptionError:
 			pass
@@ -283,6 +290,7 @@ def createConfig():
 		config.set('Preferences', 'displayIssueDescriptionOnDupe', displayIssueDescriptionOnDupe)
 		config.set('Preferences', 'assumeDirIsSeries', assumeDirIsSeries)
 		config.set('Preferences', 'promptSeriesNameIfBlank', promptSeriesNameIfBlank)
+		config.set('Preferences', 'promptSeriesIdIfBlank', promptSeriesIdIfBlank)
 		config.set('Preferences', 'logFileName', logFileName)
 		config.set('Preferences', 'interactiveMode', interactiveMode)
 		config.set('Preferences', 'includeDescriptionAsComment', includeDescriptionAsComment)
@@ -567,7 +575,12 @@ def getSeries(comicBookInfo, directory, filename):
 	if thisSeries == '' and assumeDirIsSeries == True :
 		thisSeries = os.path.basename(directory)
 		print 'Assuming series name is [%s]' % thisSeries
-	if thisSeries == '' and interactiveMode == True and promptSeriesNameIfBlank == True :
+
+	if thisSeriesId == 0 and interactiveMode == True and promptSeriesNameIfBlank == False and promptSeriesIdIfBlank == True :
+		print 'Processing %s:' % os.path.join(directory, filename)
+		thisSeriesId = raw_input('No series name found.  Enter the series Id:\t')
+
+	if thisSeries == '' and thisSeries ==0 and interactiveMode == True and promptSeriesNameIfBlank == True :
 		print 'Processing %s:' % os.path.join(directory, filename)
 		thisSeries = raw_input('No series name found.  Enter the series name:\t')
 	
@@ -780,7 +793,7 @@ def processFile(dir, filename, thisSeriesId):
 			return
 		return
 
-	if thisSeries == 0 or thisSeries == '':
+	if thisSeries == 0 and thisSeries == '':
 		print 'No Series Found'
 		if logLevel >= 2:
 			logFile = open(logFileName, 'a')
