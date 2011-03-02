@@ -405,6 +405,7 @@ def parseIssueNumberFromName(filename):
 	for word in reversed(fileWords):
 		if issueNumber == 0 and word.isdigit() == True and len(word) < 4:
 			issueNumber = word
+	issueNumber = issueNumber.lstrip("0")
 	return issueNumber
 
 def searchByFileName(filename):
