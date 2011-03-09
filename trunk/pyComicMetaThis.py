@@ -34,9 +34,9 @@
       -z, --zerocache           override use of seriesID.txt cache file.
 """
 __program__ = 'pyComicMetaThis.py'
-__version__ = '0.2j'
+__version__ = '0.2k'
 __author__ = "Andre (andre.messier@gmail.com)"
-__date__ = "2011-02-12"
+__date__ = "2011-03-09"
 __copyright__ = "Copyright (c) MMX, Andre <andre.messier@gmail.com>;Sasha <sasha@goldnet.ca>"
 __license__ = "GPL"
 
@@ -438,7 +438,13 @@ def searchByFileName(filename):
 
 def searchForIssue(seriesName, issueNumber, seriesId):
 	issueList = {}
-	cvBaseSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(seriesName + ' ' + issueNumber) + '&resources=issue' 
+	#TODO: if we have a seriesID but no seriesName, use that in our query
+	
+	if seriesId != 0:
+		cvBaseSearchURL = baseURL + 'volume/' + seriesId + '/' + APIKEY + '&query=' + urllib.quote(issueNumber) + '&resources=issue'
+	if seriesName != '':
+		cvBaseSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(seriesName + ' ' + issueNumber) + '&resources=issue' 
+	
 	#TODO: after this is working, limit the results to the fields we use
 	#cvBaseSearchURL = cvBaseSearchURL + '&field_list=name,start_year,id,description,issue_number'
 	cvBaseSearchURL = cvBaseSearchURL + '&format=json'
