@@ -89,7 +89,7 @@ promptSeriesIdIfBlank = False
 # if the series name is blank assume the directory is named after
 # the series.  Setting this to true will cause the 
 # promptSeriesNameIfBlank flag to be ignored.
-assumeDirIsSeries = False
+assumeDirIsSeries = True
 
 # if more than one match is found and we are in interactiveMode
 # these flags determine if the Issue description and/or
@@ -517,7 +517,8 @@ def searchForSeries(seriesName, offset=0):
 	return seriesList
 	
 def compareSeriesByYear (a, b):
-	return cmp(str(a['start_year']),str(b['start_year']))
+
+	return cmp(str(a.get('start_year','0')),str(b.get('start_year','0')))
 
 def displaySeriesInfo(seriesList):
 	sortedList = sorted(seriesList.values(), compareSeriesByYear)
@@ -525,7 +526,7 @@ def displaySeriesInfo(seriesList):
 	print '***************************************************'
 	for volume in sortedList:
 		for field in seriesDisplayFields:
-			print '%s:\t%s' % (field, volume[field])
+			print '%s:\t%s' % (field, volume.get(field,'undefined'))
 		print '***************************************************'
 
 def getIssueData(issueId):
