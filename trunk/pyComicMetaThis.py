@@ -85,7 +85,7 @@ logFileName = 'pyComicMetaThis.log'
 promptSeriesNameIfBlank = True
 # if the series name can't be determined AND promptSeriesNameIfBlank
 # is set to False, ask the user to enter the series ID
-promptSeriesIdIfBlank = False
+promptSeriesIdIfBlank = True
 # if the series name is blank assume the directory is named after
 # the series.  Setting this to true will cause the 
 # promptSeriesNameIfBlank flag to be ignored.
@@ -130,7 +130,7 @@ useStartYearAsVolume = True
 # padIssueNumber: how many characters you want the issue 
 # number to be in the title.  Zeroes will be used to pad
 # to this length 
-useSeriesWhenNoTitle = True
+useSeriesWhenNoTitle = False
 padIssueNumber = 3
 
 #list of fields to display when more than one series is found
@@ -957,7 +957,9 @@ def processDir(dir):
 			thisSeriesId = readSeriesId
 
 	for filename in fileList:
-		processFile(dir, filename, thisSeriesId)
+		# skip any files that start with a ._
+		if filename[:2] != "._":
+			processFile(dir, filename, thisSeriesId)
 	for subdir in dirList:
 		processDir(os.path.join(dir, subdir))
 
