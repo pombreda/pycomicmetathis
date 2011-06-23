@@ -82,7 +82,7 @@ logFileName = 'pyComicMetaThis.log'
 # if the series name can't be determined by looking at the CBI
 # ask the user to enter it.  Cannot be used if assumeDirIsSeries
 # is set to True 
-promptSeriesNameIfBlank = True
+promptSeriesNameIfBlank = False
 # if the series name can't be determined AND promptSeriesNameIfBlank
 # is set to False, ask the user to enter the series ID
 promptSeriesIdIfBlank = False
@@ -451,11 +451,16 @@ def searchForIssue(seriesName, issueNumber, seriesId):
 	offset = 0
 	resultCount = 20
 	cvSearchURL = cvBaseSearchURL
+	if showSearchProgress == True:
+		print cvSearchURL
 	print 'Querying ComicVine for the Issue...'
 	i = 0
 	while resultCount >= 20:
 		cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
 		resultCount = cvSearchResults['number_of_page_results']
+		print resultCount
+		if resultCount == 0:
+			print 'No issues found for the series'
 		for issue in cvSearchResults['results']:
 			i = i + 1
 			if showSearchProgress == True:
