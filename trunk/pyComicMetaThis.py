@@ -85,11 +85,11 @@ logFileName = 'pyComicMetaThis.log'
 promptSeriesNameIfBlank = True
 # if the series name can't be determined AND promptSeriesNameIfBlank
 # is set to False, ask the user to enter the series ID
-promptSeriesIdIfBlank = True
+promptSeriesIdIfBlank = False
 # if the series name is blank assume the directory is named after
 # the series.  Setting this to true will cause the 
 # promptSeriesNameIfBlank flag to be ignored.
-assumeDirIsSeries = True
+assumeDirIsSeries = False
 
 # if more than one match is found and we are in interactiveMode
 # these flags determine if the Issue description and/or
@@ -102,7 +102,7 @@ displaySeriesDescriptionOnDupe = True
 # limit how many characters are used there
 maxDescriptionLength = 800
 
-searchSubFolders = False
+searchSubFolders = True
 showSearchProgress = False
 
 # if you've recompiled zip with support for longer comments, set the 
@@ -588,7 +588,7 @@ def getSeries(comicBookInfo, directory, filename):
 		print 'Processing %s:' % os.path.join(directory, filename)
 		thisSeriesId = raw_input('No series name found.  Enter the series Id:\t')
 
-	if thisSeries == '' and thisSeries ==0 and interactiveMode == True and promptSeriesNameIfBlank == True :
+	if thisSeries == '' and thisSeriesId ==0 and interactiveMode == True and promptSeriesNameIfBlank == True :
 		print 'Processing %s:' % os.path.join(directory, filename)
 		thisSeries = raw_input('No series name found.  Enter the series name:\t')
 	
