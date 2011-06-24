@@ -82,7 +82,7 @@ logFileName = 'pyComicMetaThis.log'
 # if the series name can't be determined by looking at the CBI
 # ask the user to enter it.  Cannot be used if assumeDirIsSeries
 # is set to True 
-promptSeriesNameIfBlank = False
+promptSeriesNameIfBlank = True
 # if the series name can't be determined AND promptSeriesNameIfBlank
 # is set to False, ask the user to enter the series ID
 promptSeriesIdIfBlank = False
@@ -103,7 +103,7 @@ displaySeriesDescriptionOnDupe = True
 maxDescriptionLength = 800
 
 searchSubFolders = True
-showSearchProgress = False
+showSearchProgress = Falso
 
 # if you've recompiled zip with support for longer comments, set the 
 # zipCommand variable to the path to the new version
@@ -441,7 +441,7 @@ def searchForIssue(seriesName, issueNumber, seriesId):
 	#TODO: if we have a seriesID but no seriesName, use that in our query
 	
 	if seriesId != 0:
-		cvBaseSearchURL = baseURL + 'volume/' + seriesId + '/' + APIKEY + '&query=' + urllib.quote(issueNumber) + '&resources=issue'
+		cvBaseSearchURL = baseURL + 'volume/' + str(seriesId) + '/' + APIKEY + '&query=' + urllib.quote(issueNumber) + '&resources=issue'
 	if seriesName != '':
 		cvBaseSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(seriesName + ' ' + issueNumber) + '&resources=issue' 
 	
@@ -458,7 +458,6 @@ def searchForIssue(seriesName, issueNumber, seriesId):
 	while resultCount >= 20:
 		cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
 		resultCount = cvSearchResults['number_of_page_results']
-		print resultCount
 		if resultCount == 0:
 			print 'No issues found for the series'
 		for issue in cvSearchResults['results']:
