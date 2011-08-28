@@ -641,14 +641,14 @@ def getIssueNumber(comicBookInfo, directory, filename):
 		thisIssue = "0"
 	return thisIssue
 
-def getCredits(credits, cvIssueResults):
+def getCredits(issueCredits, cvIssueResults):
 	for person in cvIssueResults['results']['person_credits']:
 		for role in person['roles']:
-			credit = {}
-			credit['person'] = person['name']
-			credit['role'] = role['role'].title()
-			credits.append(credit)
-	return credits
+			issueCredit = {}
+			issueCredit['person'] = person['name']
+			issueCredit['role'] = role['role'].title()
+			issueCredits.append(credit)
+	return issueCredits
 
 def getIssueId(thisSeries, thisIssue, cvSearchResults):
 	issueId = 0
@@ -898,12 +898,12 @@ def processFile(dir, filename, thisSeriesId):
 			except: pass
 
 		if purgeExistingCredits == True:
-			credits = []
+			issueCredits = []
 		else:
-			credits = comicBookInfo['ComicBookInfo/1.0']['credits']
+			issueCredits = comicBookInfo['ComicBookInfo/1.0']['credits']
 
 		if updateCredits == True:
-			comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(credits, cvIssueResults)
+			comicBookInfo['ComicBookInfo/1.0']['credits'] = getCredits(issueCredits, cvIssueResults)
 			
 		if purgeExistingTags == True:
 			tags = []
