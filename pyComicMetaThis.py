@@ -647,7 +647,7 @@ def getCredits(issueCredits, cvIssueResults):
 			issueCredit = {}
 			issueCredit['person'] = person['name']
 			issueCredit['role'] = role['role'].title()
-			issueCredits.append(credit)
+			issueCredits.append(issueCredit)
 	return issueCredits
 
 def getIssueId(thisSeries, thisIssue, cvSearchResults):
