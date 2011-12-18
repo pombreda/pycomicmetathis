@@ -103,7 +103,7 @@ displaySeriesDescriptionOnDupe = True
 maxDescriptionLength = 800
 
 searchSubFolders = True
-showSearchProgress = Falso
+showSearchProgress = False
 
 # if you've recompiled zip with support for longer comments, set the 
 # zipCommand variable to the path to the new version
