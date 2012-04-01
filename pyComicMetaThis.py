@@ -441,7 +441,41 @@ def searchForIssue(seriesName, issueNumber, seriesId):
 	#TODO: if we have a seriesID but no seriesName, use that in our query
 	
 	if seriesId != 0:
-		cvBaseSearchURL = baseURL + 'volume/' + str(seriesId) + '/' + APIKEY + '&query=' + urllib.quote(issueNumber) + '&resources=issue'
+		#cvBaseSearchURL = baseURL + 'volume/' + str(seriesId) + '/' + APIKEY + '&query=' + urllib.quote(issueNumber) + '&resources=issue'
+		cvBaseSearchURL = baseURL + 'volume/' + str(seriesId) + '/?api_key=' + APIKEY + '&field_list=count_of_issues'
+		cvBaseSearchURL = cvBaseSearchURL + '&format=json'
+		cvSearchURL = cvBaseSearchURL
+		resultCount = 0
+		if showSearchProgress == True:
+			print cvSearchURL
+		print 'Querying ComicVine for the IssueID...'
+		i = 0
+		cvSearchResults = json.load(urllib.urlopen(cvSearchURL))
+		resultCount = cvSearchResults['results']['count_of_issues']
+		if resultCount == 0:
+			print 'No issues found for the series'
+		for issue in cvSearchResults['results']['issues']:
+			i = i + 1
+			if showSearchProgress == True:
+				print i
+			currentIssueD = decimal.Decimal(str(issue['issue_number']))
+			currentIssueI = int(currentIssueD)
+			currentIssue = str(currentIssueI).rstrip()
+			# for those odd issue number 0.5
+			if currentIssueD == decimal.Decimal(issueNumber):
+					comic = {}
+					comic['id'] = issue['id']
+					comic['name'] = issue['name']
+					comic['description'] = ''
+					issueList[issue['id']] = comic
+			if currentIssue == issueNumber:
+					comic = {}
+					comic['id'] = issue['id']
+					comic['name'] = issue['name']
+					comic['description'] = ''
+					issueList[issue['id']] = comic
+		resultCount = resultCount - 1
+		return issueList
 	if seriesName != '':
 		cvBaseSearchURL = searchURL + '?api_key=' + APIKEY + '&query=' + urllib.quote(seriesName + ' ' + issueNumber) + '&resources=issue' 
 	
